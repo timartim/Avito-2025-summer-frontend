@@ -27,7 +27,7 @@ type Board struct {
 	Description string
 	TeamID      uint
 	Team        Team   `gorm:"foreignKey:TeamID"`
-	Tasks       []Task `gorm:"foreignKey:BoardID"`
+	AllTasks       []Task `gorm:"foreignKey:BoardID"`
 }
 
 type Task struct {

@@ -1,0 +1,21 @@
+
+.nav-button, .simple-button {
+    text-decoration: none;
+    color: inherit;
+}
+
+
+
+.nav-button:hover {
+    text-decoration: none;
+    color: inherit;
+}
+
+.nav-button:focus, .simple-button:focus {
+    outline: none;
+}
+
+
+.nav-button.active {
+    font-weight: bold;
+}

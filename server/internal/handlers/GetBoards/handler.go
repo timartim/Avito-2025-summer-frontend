@@ -44,7 +44,7 @@ func (h *GetBoardsHandler) GetBoards(c *gin.Context) {
 
 func (h *GetBoardsHandler) fetchBoardsFromDB() ([]models.Board, error) {
 	var boards []models.Board
-	if err := h.db.Preload("Tasks").Find(&boards).Error; err != nil {
+	if err := h.db.Preload("AllTasks").Find(&boards).Error; err != nil {
 		return nil, err
 	}
 	return boards, nil
@@ -57,7 +57,7 @@ func (h *GetBoardsHandler) prepareResponse(boards []models.Board) []models.GetBo
 			ID:          board.ID,
 			Name:        board.Name,
 			Description: board.Description,
-			TaskCount:   len(board.Tasks),
+			TaskCount:   len(board.AllTasks),
 		}
 	}
 	return response
