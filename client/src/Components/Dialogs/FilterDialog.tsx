@@ -1,4 +1,4 @@
-// FilterDialog.tsx
+// src/Pages/FilterDialog.tsx
 import React, { useState, useMemo, useEffect } from 'react';
 import {
    Dialog,
@@ -13,6 +13,7 @@ import {
    Box,
    Paper,
    TextField,
+   Typography,
 } from '@mui/material';
 import { useSelector } from 'react-redux';
 import { RootState } from '../ReduxStore/store';
@@ -21,7 +22,7 @@ import {
    statusRuToServer,
    priorityServerToRu,
    statusServerToRu,
-} from '../Pages/AllTasks.tsx';
+} from '../Pages/AllTasks';
 
 export interface Filter {
    priorities: string[];
@@ -32,10 +33,6 @@ export interface Filter {
 interface FilterDialogProps {
    open: boolean;
    onClose: () => void;
-   /**
-    * Сохранённые значения из localStorage, приходят
-    * из родительского компонента AllTasks.
-    */
    initialValues: Filter;
    onApplyFilter: (filters: Filter) => void;
 }
@@ -52,49 +49,43 @@ export default function FilterDialog({
    const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
    const [selectedBoards, setSelectedBoards] = useState<string[]>([]);
    const [searchBoard, setSearchBoard] = useState<string>('');
-
-   /*
-    * ────────────────────────────────────────────────────────────────────────
-    *  Синхронизация state с initialValues при открытии диалога.
-    *  Переводим сохранённые значения (EN) в отображаемые (RU).
-    * ────────────────────────────────────────────────────────────────────────
-    */
+   const formStyle = {
+      mb: 1,                      // отступ снизу
+      color: 'primary.dark',      // основной цвет лейбла
+      '&.Mui-focused': {          // если сам FormLabel в фокусе
+         color: 'primary.dark',    // — оставить тот же цвет
+      },
+   };
    useEffect(() => {
       if (!open) return;
       setSelectedPriorities(
-         (initialValues.priorities ?? []).map(
-            (p) => priorityServerToRu[p] ?? p,
-         ),
+         (initialValues.priorities ?? []).map((p) => priorityServerToRu[p] ?? p)
       );
       setSelectedStatuses(
-         (initialValues.statuses ?? []).map(
-            (s) => statusServerToRu[s] ?? s,
-         ),
+         (initialValues.statuses ?? []).map((s) => statusServerToRu[s] ?? s)
       );
       setSelectedBoards(initialValues.boards ?? []);
       setSearchBoard('');
    }, [open, initialValues]);
 
-   /* ------------------------------------------------------------------- */
-
    const handlePriorityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const { name, checked } = e.target;
       setSelectedPriorities((prev) =>
-         checked ? [...prev, name] : prev.filter((item) => item !== name),
+         checked ? [...prev, name] : prev.filter((item) => item !== name)
       );
    };
 
    const handleStatusChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const { name, checked } = e.target;
       setSelectedStatuses((prev) =>
-         checked ? [...prev, name] : prev.filter((item) => item !== name),
+         checked ? [...prev, name] : prev.filter((item) => item !== name)
       );
    };
 
    const handleBoardChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const { name, checked } = e.target;
       setSelectedBoards((prev) =>
-         checked ? [...prev, name] : prev.filter((item) => item !== name),
+         checked ? [...prev, name] : prev.filter((item) => item !== name)
       );
    };
 
@@ -105,24 +96,18 @@ export default function FilterDialog({
 
    const handleApply = () => {
       onApplyFilter({
-         priorities: selectedPriorities.map(
-            (priority) => priorityRuToServer[priority] ?? priority,
-         ),
-         statuses: selectedStatuses.map(
-            (status) => statusRuToServer[status] ?? status,
-         ),
+         priorities: selectedPriorities.map((p) => priorityRuToServer[p] ?? p),
+         statuses: selectedStatuses.map((s) => statusRuToServer[s] ?? s),
          boards: selectedBoards,
       });
+      onClose();
    };
 
    const handleReset = () => {
-      const cleared: Filter = { priorities: [], statuses: [], boards: [] };
       setSelectedPriorities([]);
       setSelectedStatuses([]);
       setSelectedBoards([]);
    };
-
-   /* ------------------------------------------------------------------- */
 
    return (
       <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
@@ -130,8 +115,11 @@ export default function FilterDialog({
          <DialogContent>
             {/* Приоритет */}
             <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
-               <FormControl component="fieldset" variant="standard" fullWidth>
-                  <FormLabel component="legend" sx={{ mb: 1 }}>
+               <FormControl component="fieldset" fullWidth>
+                  <FormLabel
+                     component="legend"
+                     sx={formStyle}
+                  >
                      Приоритет
                   </FormLabel>
                   <FormGroup>
@@ -143,9 +131,14 @@ export default function FilterDialog({
                                  name={label}
                                  checked={selectedPriorities.includes(label)}
                                  onChange={handlePriorityChange}
+                                 color="primary"
                               />
                            }
-                           label={label}
+                           label={
+                              <Typography sx={{ color: 'text.primary' }}>
+                                 {label}
+                              </Typography>
+                           }
                         />
                      ))}
                   </FormGroup>
@@ -154,8 +147,11 @@ export default function FilterDialog({
 
             {/* Статус */}
             <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
-               <FormControl component="fieldset" variant="standard" fullWidth>
-                  <FormLabel component="legend" sx={{ mb: 1 }}>
+               <FormControl component="fieldset" fullWidth>
+                  <FormLabel
+                     component="legend"
+                     sx={formStyle}
+                  >
                      Статус
                   </FormLabel>
                   <FormGroup>
@@ -167,9 +163,14 @@ export default function FilterDialog({
                                  name={label}
                                  checked={selectedStatuses.includes(label)}
                                  onChange={handleStatusChange}
+                                 color="primary"
                               />
                            }
-                           label={label}
+                           label={
+                              <Typography sx={{ color: 'text.primary' }}>
+                                 {label}
+                              </Typography>
+                           }
                         />
                      ))}
                   </FormGroup>
@@ -178,8 +179,11 @@ export default function FilterDialog({
 
             {/* Доски */}
             <Paper variant="outlined" sx={{ p: 2 }}>
-               <FormControl component="fieldset" variant="standard" fullWidth>
-                  <FormLabel component="legend" sx={{ mb: 1 }}>
+               <FormControl component="fieldset" fullWidth>
+                  <FormLabel
+                     component="legend"
+                     sx={formStyle}
+                  >
                      Доски
                   </FormLabel>
 
@@ -202,9 +206,14 @@ export default function FilterDialog({
                                     name={board.name}
                                     checked={selectedBoards.includes(board.name)}
                                     onChange={handleBoardChange}
+                                    color="primary"
                                  />
                               }
-                              label={board.name}
+                              label={
+                                 <Typography sx={{ color: 'text.primary' }}>
+                                    {board.name}
+                                 </Typography>
+                              }
                            />
                         ))}
                      </FormGroup>
@@ -214,10 +223,20 @@ export default function FilterDialog({
          </DialogContent>
 
          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, px: 3, pb: 2 }}>
-            <Button variant="contained" onClick={handleReset} color="secondary" className='simple-button'>
+            <Button
+               variant="contained"
+               onClick={handleReset}
+               color="secondary"
+               className="simple-button"
+            >
                Сбросить
             </Button>
-            <Button variant="contained" onClick={onClose} color="primary" className='simple-button'>
+            <Button
+               variant="contained"
+               onClick={onClose}
+               color="primary"
+               className="simple-button"
+            >
                Отменить
             </Button>
             <Button variant="contained" onClick={handleApply} color="primary">

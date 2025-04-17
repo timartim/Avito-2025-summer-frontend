@@ -305,10 +305,10 @@ export default function TaskDialog({
             </Box>
          </DialogContent>
          <DialogActions>
-            <Button onClick={onClose} disabled={loading} className='simple-button'>
+            <Button onClick={onClose} disabled={loading} className='simple-button' variant='contained'>
                Отменить
             </Button>
-            <Button onClick={handleSubmit} disabled={loading} className='simple-button'>
+            <Button onClick={handleSubmit} disabled={loading} className='simple-button' variant='contained'>
                {mode === 'create' ? 'Создать' : 'Сохранить'}
             </Button>
          </DialogActions>

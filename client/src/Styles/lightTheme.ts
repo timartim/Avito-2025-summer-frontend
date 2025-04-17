@@ -5,8 +5,8 @@ import { Theme } from '@emotion/react';
 export const lightTheme: Theme = createTheme({
    palette: {
       mode: 'light',
-      primary: { main: '#BDBDBD' },
-      secondary: { main: '#E0E0E0' },
+      primary: { main: '#BDBDBD', dark: '#424242'},
+      secondary: { main: '#424242' },
       background: { default: '#F5F5F5', paper: '#EEEEEE' },
       text: { primary: '#424242', secondary: '#757575' },
    },
@@ -17,7 +17,7 @@ export const lightTheme: Theme = createTheme({
       h2: { fontWeight: 700, fontSize: '2.25rem', color: '#424242' },
    },
 
-  
+
    components: {
       MuiButtonBase: {
          defaultProps: {
