@@ -1,36 +1,16 @@
-import React, { useState, useEffect } from 'react';
+// src/Pages/AllBoards.tsx
+
+import React, { useEffect, useState } from 'react';
 import { Box, Button, Typography, Paper, CircularProgress } from '@mui/material';
 import { NavLink } from 'react-router-dom';
-import { getBoards, Board } from '../Api/boardRequests.ts'; // Проверьте корректность пути
 import '../../Styles/ButtonStyles.css';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchBoards, selectBoards, selectLoading, selectError } from '../ReduxSlices/dataSlice';
+import type { AppDispatch, RootState } from '../ReduxStore/store';
 
 export default function AllBoards() {
-   const [boards, setBoards] = useState<Board[]>([]);
-   const [loading, setLoading] = useState<boolean>(true);
-   const [error, setError] = useState<string>('');
-
-   useEffect(() => {
-      getBoards()
-         .then((data) => {
-            setBoards(data);
-            setError('');
-         })
-         .catch((err) => {
-            console.error('Ошибка загрузки досок:', err);
-            setError('Ошибка загрузки досок');
-         })
-         .finally(() => {
-            setLoading(false);
-         });
-   }, []);
-
-   if (loading) {
-      return (
-         <Box sx={{ p: 2, textAlign: 'center' }}>
-            <CircularProgress />
-         </Box>
-      );
-   }
+   const boards    = useSelector((state: RootState) => selectBoards(state));
+   const error     = useSelector((state: RootState) => selectError(state));
 
    if (error) {
       return (
@@ -42,7 +22,7 @@ export default function AllBoards() {
 
    return (
       <Box sx={{ p: 2 }}>
-         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+         <Box sx={{ maxHeight: '70vh', overflowY: 'auto' }}>
             {boards.map((board) => (
                <Paper
                   key={board.id}
@@ -53,6 +33,7 @@ export default function AllBoards() {
                      alignItems: 'center',
                      borderRadius: '16px',
                      boxShadow: 1,
+                     mb: 2,
                   }}
                >
                   <Typography variant="h6">{board.name}</Typography>

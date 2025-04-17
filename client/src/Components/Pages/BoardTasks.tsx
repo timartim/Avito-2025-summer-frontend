@@ -9,8 +9,9 @@ import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautif
 import { getBoardTasks, Task } from '../Api/boardRequests';
 import TaskDialog from '../Dialogs/TaskDialog';
 import { RootState } from '../ReduxStore/store';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { updateTaskStatus } from '../Api/taskRequests';
+import { setLoading } from '../ReduxSlices/userActionSlice.ts';
 
 interface RouteParams {
    id: string;
@@ -31,16 +32,16 @@ export default function BoardTasks() {
       InProgress: [],
       Done: [],
    });
-   const [loading, setLoading] = useState<boolean>(true);
    const [error, setError] = useState<string>('');
    const [selectedTask, setSelectedTask] = useState<Task | null>(null);
    const [openTaskDialog, setOpenTaskDialog] = useState(false);
-
+   const dispatch = useDispatch()
    const boards = useSelector((state: RootState) => state.data.boards);
    const boardName = boards.find((board) => board.id === Number(id))?.name || 'Доска не найдена';
 
    useEffect(() => {
       if (typeof id === 'string') {
+
          getBoardTasks(parseInt(id))
             .then((res) => {
                setTasks(res);
@@ -52,7 +53,7 @@ export default function BoardTasks() {
                setError('Ошибка загрузки задач');
             })
             .finally(() => {
-               setLoading(false);
+
             });
       }
    }, [id]);
@@ -96,13 +97,6 @@ export default function BoardTasks() {
       }
    };
 
-   if (loading) {
-      return (
-         <Box sx={{ p: 2, textAlign: 'center' }}>
-            <CircularProgress />
-         </Box>
-      );
-   }
    if (error) {
       return (
          <Box sx={{ p: 2, textAlign: 'center' }}>

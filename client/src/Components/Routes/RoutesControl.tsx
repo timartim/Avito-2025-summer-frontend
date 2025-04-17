@@ -1,17 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { AppBar, Toolbar, Button, Box, CssBaseline } from '@mui/material';
 import { NavLink, useLocation } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
-import { setUsers, setBoards } from '../ReduxSlices/dataSlice';
+import { useDispatch, useSelector } from 'react-redux';
 import { getUsers } from '../Api/userRequests.ts';
 import { getBoards } from '../Api/boardRequests.ts';
 import RoutesConfig from './RoutesConfig';
 import TaskDialog, { Task } from '../Dialogs/TaskDialog';
 import '../../Styles/ButtonStyles.css';
+import GlobalLoading from '../Beauty/GlobalLoading.tsx';
+import { setLoading } from '../ReduxSlices/userActionSlice.ts';
+import { RootState } from '../ReduxStore/store.ts';
+import { fetchBoards, fetchTasks, fetchUsers } from '../ReduxSlices/dataSlice.ts';
 
 function RoutesControl() {
    const dispatch = useDispatch();
    const [openTaskDialog, setOpenTaskDialog] = useState(false);
+   const isLoading = useSelector((state: RootState) => state.data.isLoading)
    const location = useLocation();
    const initialTaskValues: Task = {
       title: '',
@@ -23,21 +27,9 @@ function RoutesControl() {
    };
 
    useEffect(() => {
-      getUsers()
-         .then((users) => {
-            dispatch(setUsers(users));
-         })
-         .catch((err) => {
-            console.error('Ошибка загрузки пользователей:', err);
-         });
-
-      getBoards()
-         .then((boards) => {
-            dispatch(setBoards(boards));
-         })
-         .catch((err) => {
-            console.error('Ошибка загрузки досок:', err);
-         });
+      dispatch(fetchBoards())
+      dispatch(fetchUsers())
+      dispatch(fetchTasks())
    }, [dispatch]);
 
    const handleTaskSubmit = (task: Task) => {
@@ -52,6 +44,7 @@ function RoutesControl() {
    return (
       <Box sx={{ flexGrow: 1 }}>
          <CssBaseline />
+         <GlobalLoading />
          <Box sx={{ boxShadow: 1, width: '100%' }}>
             <Toolbar sx={{ justifyContent: 'space-between' }}>
                <Box>
@@ -79,7 +72,7 @@ function RoutesControl() {
                   </Button>
                </Box>
 
-               <Box>
+               <Box sx={{display: 'flex'}}>
                   <Button
                      variant="contained"
                      color="primary"
@@ -88,12 +81,16 @@ function RoutesControl() {
                   >
                      Добавить задачу
                   </Button>
+
                </Box>
             </Toolbar>
          </Box>
 
          <Box sx={{ width: '100vw', height: '100vh', p: 2 }}>
-            <RoutesConfig />
+            {!isLoading &&
+               <RoutesConfig />
+            }
+
          </Box>
 
          <TaskDialog

@@ -18,6 +18,8 @@ import { getTasks, TaskFull } from '../Api/taskRequests';
 import '../../Styles/ButtonStyles.css';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
+import { RootState } from '../ReduxStore/store.ts';
+import { selectTasks } from '../ReduxSlices/dataSlice.ts';
 
 const priorityServerToRu: Record<string, string> = {
    High: 'Высокое',
@@ -44,31 +46,19 @@ export const statusRuToServer: Record<string, string> = {
 };
 
 export default function AllTasks() {
-   const [tasks, setTasks] = useState<TaskFull[]>([]);
-   const [loading, setLoading] = useState(true);
-   const [error, setError] = useState('');
+   const [tasks, setTasks] = useState<Task[]>([]);
    const [openTaskDialog, setOpenTaskDialog] = useState(false);
    const [selectedTask, setSelectedTask] = useState<Partial<Task>>({});
    const [searchText, setSearchText] = useState('');
    const [openFilterDialog, setOpenFilterDialog] = useState(false);
-   const [allTasks, setAllTasks] = useState([]);
+
+   const allTasks = useSelector((state: RootState) => selectTasks(state))
+   console.log(allTasks)
    const boards = useSelector((state => state.data.boards ?? []))
    const navigate = useNavigate();
    useEffect(() => {
-      getTasks()
-         .then((data) => {
-            setTasks(data);
-            setAllTasks(data);
-            setError('');
-         })
-         .catch(() => {
-            setError('Ошибка загрузки задач');
-         })
-         .finally(() => {
-            setLoading(false);
-         });
-   }, []);
-
+      setTasks(allTasks)
+   }, [allTasks]);
    const searchedTasks = tasks.filter((task) =>
       task.title.toLowerCase().includes(searchText.toLowerCase())
    );
@@ -85,6 +75,7 @@ export default function AllTasks() {
          status: stRu,
          assignee: { id: task.assignee.id },
          boardName: task.boardName,
+         boardId: task.boardId
       });
       if (mode === 'modal'){
          setOpenTaskDialog(true);
@@ -167,21 +158,7 @@ export default function AllTasks() {
    function findTasks(e){
       setSearchText(e.target.value)
    }
-   if (loading) {
-      return (
-         <Box sx={{ p: 2, textAlign: 'center' }}>
-            <CircularProgress />
-         </Box>
-      );
-   }
 
-   if (error) {
-      return (
-         <Box sx={{ p: 2, textAlign: 'center' }}>
-            <Typography color="error">{error}</Typography>
-         </Box>
-      );
-   }
    return (
       <Box sx={{ p: 2, width: '100%', height: '100%', position: 'relative' }}>
          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
@@ -205,7 +182,6 @@ export default function AllTasks() {
          <Paper sx={(theme) => ({ p: 2, border: `1px solid ${theme.palette.divider}` })}>
             <List sx={{ overflowY: 'auto', maxHeight: '60vh' }}>
                {searchedTasks.map((task) => {
-                  console.log(boards)
                   const board = boards.find((element) => element.name === task.boardName);
 
                   return (<ListItem
