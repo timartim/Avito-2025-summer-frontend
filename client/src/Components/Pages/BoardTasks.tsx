@@ -41,7 +41,6 @@ export default function BoardTasks() {
    const navigate = useNavigate();
    const dispatch = useDispatch<AppDispatch>();
 
-   // Redux state
    const boardTasks = useSelector(selectBoardTasks);
    const currentBoardId = useSelector(selectCurrentBoard);
    const loading = useSelector(selectBoardLoading);
@@ -50,35 +49,31 @@ export default function BoardTasks() {
 
    const boardName = boards.find((b) => b.id === boardId)?.name || 'Доска не найдена';
 
-   // Local state
    const [groupedTasks, setGroupedTasks] = useState(groupTasksByStatus(boardTasks));
    const [selectedTask, setSelectedTask] = useState<any>(null);
    const [openDialog, setOpenDialog] = useState(false);
 
-   // 1) Fetch tasks for this board if not already loaded
    useEffect(() => {
       if (!isNaN(boardId) && currentBoardId !== boardId) {
          dispatch(fetchBoardTasks(boardId));
       }
    }, [dispatch, boardId, currentBoardId]);
 
-   // 2) Whenever tasks in Redux change, re-group them
    useEffect(() => {
       setGroupedTasks(groupTasksByStatus(boardTasks));
    }, [boardTasks]);
 
-   // 3) On mount, open dialog if navigated here with a task, then clear location.state
+
    useEffect(() => {
       if (location.state?.task) {
          setSelectedTask(location.state.task);
          setOpenDialog(true);
-         // remove the task from location.state so it won't re-open
+
          navigate(location.pathname, { replace: true, state: {} });
       }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-   }, []); // run only once on mount
 
-   // Handlers
+   }, []);
+
    const handleDragEnd = async (result: DropResult) => {
       const { source, destination } = result;
       if (
@@ -128,7 +123,7 @@ export default function BoardTasks() {
 
    return (
       <Box sx={{ p: 2 }}>
-         <Typography variant="h4" sx={{ mb: 2 }}>
+         <Typography sx={{fontSize: '25px', fontWeight: 'bold', m: 1}}>
             {boardName}
          </Typography>
 
@@ -144,14 +139,13 @@ export default function BoardTasks() {
                               flex: 1,
                               maxHeight: '70vh',
                               overflowY: 'auto',
-                              bgcolor: snapshot.isDraggingOver ? 'grey.100' : 'grey.50',
                               border: '1px solid',
                               borderColor: 'divider',
                               borderRadius: 2,
                               p: 1,
                            }}
                         >
-                           <Typography variant="h6" sx={{ mb: 1 }}>
+                           <Typography sx={{ mb: 1, fontSize: '20px', fontWeight: 'bold' }}>
                               {status === 'Backlog'
                                  ? 'Не начато'
                                  : status === 'InProgress'
@@ -191,7 +185,6 @@ export default function BoardTasks() {
             </Box>
          </DragDropContext>
 
-         {/* TaskDialog for edit/create */}
          <TaskDialog
             open={openDialog}
             onClose={() => setOpenDialog(false)}

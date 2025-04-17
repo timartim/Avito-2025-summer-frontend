@@ -82,7 +82,6 @@ export default function TaskDialog({
    const [errors, setErrors] = useState<Partial<Record<keyof Task, string>>>({});
 
    useEffect(() => {
-      // Initialize form state from initialValues
       const mapped: Partial<Task> = { ...initialValues };
       if (mapped.assignee && mapped.assignee.id) {
          mapped.assigneeId = mapped.assignee.id;
@@ -131,13 +130,13 @@ export default function TaskDialog({
    };
 
    const handlePriorityChange = (
-      e: React.ChangeEvent<{ value: unknown }>
+      e: React.ChangeEvent<{ value: unknown }>,
    ) => {
       setTask(prev => ({ ...prev, priority: e.target.value as string }));
    };
 
    const handleStatusChange = (
-      e: React.ChangeEvent<{ value: unknown }>
+      e: React.ChangeEvent<{ value: unknown }>,
    ) => {
       setTask(prev => ({ ...prev, status: e.target.value as string }));
    };
@@ -153,6 +152,17 @@ export default function TaskDialog({
       return newErrors;
    };
 
+
+   const handleCancel = () => {
+      if (mode === 'create') {
+         const draft: Partial<Task> = { ...task };
+         const existing = JSON.parse(localStorage.getItem('taskDialogDrafts') || '[]');
+         existing.push(draft);
+         localStorage.setItem('taskDialogDrafts', JSON.stringify(existing));
+      }
+      onClose();
+   };
+
    const handleSubmit = async () => {
       const newErrors = validate();
       if (Object.keys(newErrors).length) {
@@ -160,9 +170,7 @@ export default function TaskDialog({
          return;
       }
 
-      // Match board by id to get name
-      const selectedBoard = boards.find(b => b.id === task.boardId);
-      const selectedBoardName = selectedBoard ? selectedBoard.name : '';
+      const boardName = boards.find(b => b.id === task.boardId)?.name || '';
 
       const serverPriority = priorityRuToServer[task.priority!] as string;
       if (mode === 'create') {
@@ -173,16 +181,11 @@ export default function TaskDialog({
                priority: serverPriority,
                assigneeId: task.assigneeId!,
                boardId: task.boardId!,
-               boardName: task.boardName
-            })
+               boardName,
+            }),
          );
          if (createTaskThunk.fulfilled.match(action)) {
-            const created: Task = {
-               ...action.payload,
-               boardName: selectedBoardName,
-               assignee: task.assignee!,
-            };
-            onSubmit(created);
+            onSubmit({ ...action.payload, assignee: task.assignee!, boardName });
             onClose();
          }
       } else {
@@ -196,24 +199,19 @@ export default function TaskDialog({
                status: serverStatus,
                assigneeId: task.assigneeId!,
                boardId: task.boardId!,
-               boardName: task.boardName
-            })
+               boardName,
+            }),
          );
          if (updateTaskThunk.fulfilled.match(action)) {
-            const updated: Task = {
-               ...action.payload,
-               boardName: selectedBoardName,
-               assignee: task.assignee!,
-            };
-            onSubmit(updated);
+            onSubmit({ ...action.payload, assignee: task.assignee!, boardName });
             onClose();
          }
       }
    };
 
    return (
-      <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-         <DialogTitle>
+      <Dialog open={open} onClose={handleCancel} maxWidth="sm" fullWidth>
+         <DialogTitle sx={{ fontWeight: 'bold', fontSize: '25px' }}>
             {mode === 'create' ? 'Создать задачу' : 'Редактировать задачу'}
          </DialogTitle>
          <DialogContent>
@@ -291,7 +289,6 @@ export default function TaskDialog({
                      )}
                   />
                ) : (
-                  task.boardName &&
                   <TextField
                      label="Проект"
                      value={task.boardName}
@@ -300,15 +297,24 @@ export default function TaskDialog({
                      error={!!errors.boardName}
                      helperText={errors.boardName}
                   />
-
                )}
             </Box>
          </DialogContent>
          <DialogActions>
-            <Button onClick={onClose} disabled={loading} className='simple-button' variant='contained'>
+            <Button
+               onClick={handleCancel}
+               disabled={loading}
+               className="simple-button"
+               variant="contained"
+            >
                Отменить
             </Button>
-            <Button onClick={handleSubmit} disabled={loading} className='simple-button' variant='contained'>
+            <Button
+               onClick={handleSubmit}
+               disabled={loading}
+               className="simple-button"
+               variant="contained"
+            >
                {mode === 'create' ? 'Создать' : 'Сохранить'}
             </Button>
          </DialogActions>

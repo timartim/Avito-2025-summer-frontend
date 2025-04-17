@@ -111,7 +111,7 @@ export default function FilterDialog({
 
    return (
       <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
-         <DialogTitle>Фильтры</DialogTitle>
+         <DialogTitle sx={{fontSize: '25px', fontWeight: 'bold'}}>Фильтры</DialogTitle>
          <DialogContent>
             {/* Приоритет */}
             <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>

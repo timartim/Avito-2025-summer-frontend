@@ -1,42 +1,50 @@
-// theme/lightTheme.ts
+
 import { createTheme } from '@mui/material/styles';
 import { Theme } from '@emotion/react';
 
 export const lightTheme: Theme = createTheme({
    palette: {
       mode: 'light',
-      primary: { main: '#BDBDBD', dark: '#424242'},
-      secondary: { main: '#424242' },
-      background: { default: '#F5F5F5', paper: '#EEEEEE' },
-      text: { primary: '#424242', secondary: '#757575' },
+      primary: {
+         main: '#00AAFF',
+         light: '#66CBFF',
+         dark: '#007ACC',
+         contrastText: '#FFFFFF',
+      },
+      secondary: {
+         main: '#FF6163',
+         light: '#FF8A8C',
+         dark: '#CC5153',
+         contrastText: '#FFFFFF',
+      },
+      success:   { main: '#97CF26', contrastText: '#212121' },
+      info:      { main: '#A169F7', contrastText: '#FFFFFF' },
+      background:{
+         default: '#FFFFFF',
+         paper:   '#F5F5F5',
+      },
+      text: {
+         primary:   '#212121',
+         secondary: '#757575',
+         disabled:  '#BDBDBD',
+      },
+      common: {
+         black: '#000000',
+         white: '#FFFFFF',
+      },
    },
    typography: {
       fontFamily: ['Arial', 'sans-serif'].join(','),
-      allVariants: { fontSize: 20, color: '#424242' },
-      h1: { fontWeight: 700, fontSize: '3rem', color: '#424242' },
-      h2: { fontWeight: 700, fontSize: '2.25rem', color: '#424242' },
+      allVariants: { fontSize: 16, color: '#212121' },
+      h1: { fontWeight: 700, fontSize: '2.5rem' },
+      h2: { fontWeight: 700, fontSize: '2rem' },
    },
-
-
    components: {
-      MuiButtonBase: {
-         defaultProps: {
-            disableRipple: true,
-         },
-         styleOverrides: {
-            root: {
-               '&.Mui-focusVisible': { outline: 'none' },
-            },
-         },
-      },
-
       MuiButton: {
          styleOverrides: {
             root: {
                borderRadius: 0,
                textTransform: 'none',
-               fontWeight: 500,
-               '&:hover': { backgroundColor: '#E0E0E0' },
             },
          },
       },

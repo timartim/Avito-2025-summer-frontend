@@ -7,7 +7,7 @@ import {
    ListItemText,
    TextField,
    Button,
-   Paper,
+   Paper, IconButton,
 } from '@mui/material';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { useNavigate } from 'react-router-dom';
@@ -21,7 +21,7 @@ import {
    updateTask,
    TaskInput,
 } from '../ReduxSlices/dataSlice';
-
+import AddIcon from '@mui/icons-material/Add';
 export const priorityServerToRu: Record<string, string> = {
    High: 'Высокое',
    Medium: 'Среднее',
@@ -208,10 +208,23 @@ export default function AllTasks() {
          {/* Список задач */}
          <Paper sx={{ p: 2, border: (t) => `1px solid ${t.palette.divider}` }}>
             <TaskList tasks={displayed} boards={boards} onOpen={openModal} onNav={navBoard} />
+
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', pt: 1 }}>
-               <Button variant="contained" className='simple-button' onClick={() => openModal({})}>
-                  Добавить задачу
-               </Button>
+               <IconButton
+                  onClick={() => openModal({})}
+                  color="primary"
+                  className="simple-button"
+                  size="medium"
+                  sx={{
+                     border: 1,
+                     borderColor: 'primary.main',
+                     width: 40,
+                     height: 40,
+                     p: 0,
+                  }}
+               >
+                  <AddIcon />
+               </IconButton>
             </Box>
          </Paper>
 
