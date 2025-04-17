@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  backend:
+    image: project-manager-app-backend:latest
+    container_name: project-manager-app-backend
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8080"
+    restart: unless-stopped
+
+  frontend:
+    image: project-manager-app-frontend:latest
+    container_name: project-manager-app-frontend
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
