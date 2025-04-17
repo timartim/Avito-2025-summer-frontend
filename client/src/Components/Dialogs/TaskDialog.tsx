@@ -1,3 +1,5 @@
+// src/Dialogs/TaskDialog.tsx
+
 import React, { useState, useEffect } from 'react';
 import {
    Dialog,
@@ -13,9 +15,13 @@ import {
    Select,
    MenuItem,
 } from '@mui/material';
-import { createTask, updateTask } from '../Api/taskRequests';
-import { RootState } from '../ReduxStore/store';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
+import { AppDispatch, RootState } from '../ReduxStore/store';
+import {
+   createTask as createTaskThunk,
+   updateTask as updateTaskThunk,
+   selectLoading as selectDataLoading,
+} from '../ReduxSlices/dataSlice';
 import { Board, Assignee } from '../ReduxSlices/dataSlice';
 
 export interface Task {
@@ -23,7 +29,7 @@ export interface Task {
    title: string;
    description: string;
    priority: 'Небольшое' | 'Среднее' | 'Высокое' | string;
-   status: 'Не начато' | 'В процессе' | 'Выполнено' | string;
+   status?: 'Не начато' | 'В процессе' | 'Выполнено' | string;
    assigneeId: number;
    assignee: Assignee;
    boardName: string;
@@ -38,33 +44,21 @@ interface TaskDialogProps {
    onSubmit: (task: Task) => void;
 }
 
-interface Errors {
-   title?: string;
-   description?: string;
-   assigneeId?: string;
-   boardName?: string;
-   priority?: string;
-   status?: string;
-}
-
 const priorityServerToRu: Record<string, string> = {
    High: 'Высокое',
    Medium: 'Среднее',
    Low: 'Небольшое',
 };
-
 const priorityRuToServer: Record<string, string> = {
    'Высокое': 'High',
    'Среднее': 'Medium',
    'Небольшое': 'Low',
 };
-
 const statusServerToRu: Record<string, string> = {
    Backlog: 'Не начато',
    InProgress: 'В процессе',
    Done: 'Выполнено',
 };
-
 const statusRuToServer: Record<string, string> = {
    'Не начато': 'Backlog',
    'В процессе': 'InProgress',
@@ -78,15 +72,21 @@ export default function TaskDialog({
                                       initialValues,
                                       onSubmit,
                                    }: TaskDialogProps) {
-   const [task, setTask] = useState<Partial<Task>>({});
-   const [submitting, setSubmitting] = useState(false);
-   const [errors, setErrors] = useState<Errors>({});
+   const dispatch = useDispatch<AppDispatch>();
+   const loading = useSelector((state: RootState) => selectDataLoading(state));
 
-   const assignees = useSelector((state: RootState) => state.data.users ?? []);
-   const boards = useSelector((state: RootState) => state.data.boards ?? []);
+   const assignees = useSelector((state: RootState) => state.data.users);
+   const boards = useSelector((state: RootState) => state.data.boards);
+
+   const [task, setTask] = useState<Partial<Task>>({});
+   const [errors, setErrors] = useState<Partial<Record<keyof Task, string>>>({});
 
    useEffect(() => {
-      const mapped = { ...initialValues };
+      // Initialize form state from initialValues
+      const mapped: Partial<Task> = { ...initialValues };
+      if (mapped.assignee && mapped.assignee.id) {
+         mapped.assigneeId = mapped.assignee.id;
+      }
       if (mode === 'edit') {
          if (mapped.priority && priorityServerToRu[mapped.priority]) {
             mapped.priority = priorityServerToRu[mapped.priority];
@@ -99,13 +99,18 @@ export default function TaskDialog({
          const found = assignees.find(a => a.id === mapped.assigneeId);
          if (found) mapped.assignee = found;
       }
-      setTask(mapped);
+      setTask({
+         ...mapped,
+         boardName: mapped.boardName || '',
+         boardId: mapped.boardId || 0,
+      });
       setErrors({});
    }, [initialValues, open, mode, assignees]);
 
-   const handleChange = (prop: keyof Task) => (e: React.ChangeEvent<HTMLInputElement>) => {
-      setTask(prev => ({ ...prev, [prop]: e.target.value }));
-   };
+   const handleChange = (prop: keyof Task) =>
+      (e: React.ChangeEvent<HTMLInputElement>) => {
+         setTask(prev => ({ ...prev, [prop]: e.target.value }));
+      };
 
    const handleAssigneeChange = (_: any, value: Assignee | null) => {
       setTask(prev => ({
@@ -125,110 +130,126 @@ export default function TaskDialog({
       }
    };
 
-   const handlePriorityChange = (e: React.ChangeEvent<{ value: unknown }>) => {
+   const handlePriorityChange = (
+      e: React.ChangeEvent<{ value: unknown }>
+   ) => {
       setTask(prev => ({ ...prev, priority: e.target.value as string }));
    };
 
-   const handleStatusChange = (e: React.ChangeEvent<{ value: unknown }>) => {
+   const handleStatusChange = (
+      e: React.ChangeEvent<{ value: unknown }>
+   ) => {
       setTask(prev => ({ ...prev, status: e.target.value as string }));
    };
 
-   const validate = (): Errors => {
-      const newErrors: Errors = {};
-      if (!task.title || !task.title.trim()) newErrors.title = 'Заголовок обязателен';
-      if (!task.description || !task.description.trim()) newErrors.description = 'Описание обязательно';
-      if (!task.assigneeId || task.assigneeId === 0) newErrors.assigneeId = 'Выберите исполнителя';
-      if (mode === 'create' && (!task.boardId || task.boardId === 0)) newErrors.boardName = 'Выберите проект';
-      if (mode === 'edit' && (!task.boardName || !task.boardName.trim())) newErrors.boardName = 'Выберите проект';
-      if (!task.priority || !task.priority.trim()) newErrors.priority = 'Выберите приоритет';
-      if (mode === 'edit' && (!task.status || !task.status.trim())) newErrors.status = 'Выберите статус';
+   const validate = (): typeof errors => {
+      const newErrors: typeof errors = {};
+      if (!task.title?.trim()) newErrors.title = 'Заголовок обязателен';
+      if (!task.description?.trim()) newErrors.description = 'Описание обязательно';
+      if (!task.assigneeId) newErrors.assigneeId = 'Выберите исполнителя';
+      if (mode === 'create' && !task.boardId) newErrors.boardName = 'Выберите проект';
+      if (!task.priority) newErrors.priority = 'Выберите приоритет';
+      if (mode === 'edit' && !task.status) newErrors.status = 'Выберите статус';
       return newErrors;
    };
 
    const handleSubmit = async () => {
       const newErrors = validate();
-      if (Object.keys(newErrors).length > 0) {
+      if (Object.keys(newErrors).length) {
          setErrors(newErrors);
          return;
       }
-      setSubmitting(true);
-      try {
-         const finalPriority = priorityRuToServer[task.priority ?? ''] ?? task.priority ?? 'Medium';
-         let finalStatus = '';
-         if (mode === 'edit' && task.status) {
-            finalStatus = statusRuToServer[task.status] ?? task.status;
-         }
-         if (mode === 'create') {
-            const input = {
-               assigneeId: task.assigneeId ?? 0,
-               boardId: task.boardId ?? 0,
-               description: task.description ?? '',
-               priority: finalPriority,
-               title: task.title ?? '',
+
+      // Match board by id to get name
+      const selectedBoard = boards.find(b => b.id === task.boardId);
+      const selectedBoardName = selectedBoard ? selectedBoard.name : '';
+
+      const serverPriority = priorityRuToServer[task.priority!] as string;
+      if (mode === 'create') {
+         const action = await dispatch(
+            createTaskThunk({
+               title: task.title!,
+               description: task.description!,
+               priority: serverPriority,
+               assigneeId: task.assigneeId!,
+               boardId: task.boardId!,
+               boardName: task.boardName
+            })
+         );
+         if (createTaskThunk.fulfilled.match(action)) {
+            const created: Task = {
+               ...action.payload,
+               boardName: selectedBoardName,
+               assignee: task.assignee!,
             };
-            const result = await createTask(input);
-            console.log('Создана задача:', result.id);
-         } else if (mode === 'edit' && task.id) {
-            const input = {
-               assigneeId: task.assignee?.id ?? 0,
-               description: task.description ?? '',
-               priority: finalPriority,
-               status: finalStatus || 'Backlog',
-               title: task.title ?? '',
-            };
-            const result = await updateTask(task.id, input);
-            console.log('Обновлена задача:', result.message);
+            onSubmit(created);
+            onClose();
          }
-         onSubmit({ ...task, priority: finalPriority, status: finalStatus } as Task);
-         onClose();
-      } catch (err) {
-         console.error('Ошибка при сохранении задачи:', err);
-      } finally {
-         setSubmitting(false);
+      } else {
+         const serverStatus = statusRuToServer[task.status!] as string;
+         const action = await dispatch(
+            updateTaskThunk({
+               id: task.id!,
+               title: task.title!,
+               description: task.description!,
+               priority: serverPriority,
+               status: serverStatus,
+               assigneeId: task.assigneeId!,
+               boardId: task.boardId!,
+               boardName: task.boardName
+            })
+         );
+         if (updateTaskThunk.fulfilled.match(action)) {
+            const updated: Task = {
+               ...action.payload,
+               boardName: selectedBoardName,
+               assignee: task.assignee!,
+            };
+            onSubmit(updated);
+            onClose();
+         }
       }
    };
 
    return (
       <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-         <DialogTitle>{mode === 'create' ? 'Создать задачу' : 'Редактировать задачу'}</DialogTitle>
+         <DialogTitle>
+            {mode === 'create' ? 'Создать задачу' : 'Редактировать задачу'}
+         </DialogTitle>
          <DialogContent>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
                <TextField
                   label="Заголовок"
                   value={task.title ?? ''}
                   onChange={handleChange('title')}
-                  error={Boolean(errors.title)}
+                  error={!!errors.title}
                   helperText={errors.title}
                   fullWidth
-                  variant="outlined"
                />
                <TextField
                   label="Описание"
                   value={task.description ?? ''}
                   onChange={handleChange('description')}
-                  error={Boolean(errors.description)}
+                  error={!!errors.description}
                   helperText={errors.description}
                   fullWidth
                   multiline
-                  variant="outlined"
                />
                <Autocomplete
                   options={assignees}
-                  getOptionLabel={(option: Assignee) => option.fullName}
-                  value={assignees.find(a => a.id === (task.assignee?.id ?? task.assigneeId ?? 0)) || null}
+                  getOptionLabel={o => o.fullName}
+                  value={assignees.find(a => a.id === task.assigneeId) || null}
                   onChange={handleAssigneeChange}
-                  renderInput={(params) => (
+                  renderInput={params => (
                      <TextField
                         {...params}
                         label="Исполнитель"
-                        error={Boolean(errors.assigneeId)}
+                        error={!!errors.assigneeId}
                         helperText={errors.assigneeId}
-                        variant="outlined"
                      />
                   )}
                />
-
-               <FormControl fullWidth error={Boolean(errors.priority)}>
+               <FormControl fullWidth error={!!errors.priority}>
                   <InputLabel>Приоритет</InputLabel>
                   <Select
                      value={task.priority ?? ''}
@@ -241,7 +262,7 @@ export default function TaskDialog({
                   </Select>
                </FormControl>
                {mode === 'edit' && (
-                  <FormControl fullWidth error={Boolean(errors.status)}>
+                  <FormControl fullWidth error={!!errors.status}>
                      <InputLabel>Статус</InputLabel>
                      <Select
                         value={task.status ?? ''}
@@ -257,44 +278,37 @@ export default function TaskDialog({
                {mode === 'create' ? (
                   <Autocomplete
                      options={boards}
-                     getOptionLabel={(option: Board) => option.name}
-                     value={boards.find(b => b.id === (task.boardId ?? 0)) || null}
+                     getOptionLabel={o => o.name}
+                     value={boards.find(b => b.id === task.boardId) || null}
                      onChange={handleBoardChange}
-                     renderInput={(params) => (
+                     renderInput={params => (
                         <TextField
                            {...params}
                            label="Проект"
-                           error={Boolean(errors.boardName)}
+                           error={!!errors.boardName}
                            helperText={errors.boardName}
-                           variant="outlined"
                         />
                      )}
-                     ListboxProps={{
-                        style: {
-                           maxHeight: 200,
-                           overflow: 'auto',
-                        },
-                     }}
                   />
-
                ) : (
+                  task.boardName &&
                   <TextField
                      label="Проект"
-                     value={task.boardName ?? ''}
+                     value={task.boardName}
                      disabled
                      fullWidth
-                     variant="outlined"
-                     error={Boolean(errors.boardName)}
+                     error={!!errors.boardName}
                      helperText={errors.boardName}
                   />
+
                )}
             </Box>
          </DialogContent>
          <DialogActions>
-            <Button variant="contained" className="simple-button" onClick={onClose} disabled={submitting}>
+            <Button onClick={onClose} disabled={loading} className='simple-button'>
                Отменить
             </Button>
-            <Button variant="contained" onClick={handleSubmit} disabled={submitting}>
+            <Button onClick={handleSubmit} disabled={loading} className='simple-button'>
                {mode === 'create' ? 'Создать' : 'Сохранить'}
             </Button>
          </DialogActions>

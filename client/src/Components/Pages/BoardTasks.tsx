@@ -1,103 +1,124 @@
+// src/Pages/BoardTasks.tsx
 import React, { useEffect, useState } from 'react';
-import { useParams, useLocation } from 'react-router-dom';
+import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import {
    Box,
    Typography,
    CircularProgress,
 } from '@mui/material';
-import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
-import { getBoardTasks, Task } from '../Api/boardRequests';
-import TaskDialog from '../Dialogs/TaskDialog';
-import { RootState } from '../ReduxStore/store';
+import {
+   DragDropContext,
+   Droppable,
+   Draggable,
+   DropResult,
+} from 'react-beautiful-dnd';
 import { useDispatch, useSelector } from 'react-redux';
+import TaskDialog from '../Dialogs/TaskDialog';
+import { RootState, AppDispatch } from '../ReduxStore/store';
+import {
+   fetchBoardTasks,
+   selectBoardTasks,
+   selectCurrentBoard,
+   selectLoading as selectBoardLoading,
+   selectError as selectBoardError,
+} from '../ReduxSlices/dataSlice';
 import { updateTaskStatus } from '../Api/taskRequests';
-import { setLoading } from '../ReduxSlices/userActionSlice.ts';
 
 interface RouteParams {
    id: string;
 }
 
-const groupTasksByStatus = (tasks: Task[]) => ({
-   Backlog: tasks.filter((task) => task.status === 'Backlog'),
-   InProgress: tasks.filter((task) => task.status === 'InProgress'),
-   Done: tasks.filter((task) => task.status === 'Done'),
+const groupTasksByStatus = (tasks: Array<{ id?: number; status: string; title: string }>) => ({
+   Backlog: tasks.filter((t) => t.status === 'Backlog'),
+   InProgress: tasks.filter((t) => t.status === 'InProgress'),
+   Done: tasks.filter((t) => t.status === 'Done'),
 });
 
 export default function BoardTasks() {
    const { id } = useParams<RouteParams>();
-   const location = useLocation();
-   const [tasks, setTasks] = useState<Task[]>([]);
-   const [groupedTasks, setGroupedTasks] = useState<{ [key: string]: Task[] }>({
-      Backlog: [],
-      InProgress: [],
-      Done: [],
-   });
-   const [error, setError] = useState<string>('');
-   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-   const [openTaskDialog, setOpenTaskDialog] = useState(false);
-   const dispatch = useDispatch()
-   const boards = useSelector((state: RootState) => state.data.boards);
-   const boardName = boards.find((board) => board.id === Number(id))?.name || 'Доска не найдена';
+   const boardId = Number(id);
+   const location = useLocation<{ task?: any }>();
+   const navigate = useNavigate();
+   const dispatch = useDispatch<AppDispatch>();
 
+   // Redux state
+   const boardTasks = useSelector(selectBoardTasks);
+   const currentBoardId = useSelector(selectCurrentBoard);
+   const loading = useSelector(selectBoardLoading);
+   const error = useSelector(selectBoardError);
+   const boards = useSelector((s: RootState) => s.data.boards);
+
+   const boardName = boards.find((b) => b.id === boardId)?.name || 'Доска не найдена';
+
+   // Local state
+   const [groupedTasks, setGroupedTasks] = useState(groupTasksByStatus(boardTasks));
+   const [selectedTask, setSelectedTask] = useState<any>(null);
+   const [openDialog, setOpenDialog] = useState(false);
+
+   // 1) Fetch tasks for this board if not already loaded
    useEffect(() => {
-      if (typeof id === 'string') {
-
-         getBoardTasks(parseInt(id))
-            .then((res) => {
-               setTasks(res);
-               setGroupedTasks(groupTasksByStatus(res));
-               setError('');
-            })
-            .catch((e) => {
-               console.error('Ошибка загрузки задач:', e);
-               setError('Ошибка загрузки задач');
-            })
-            .finally(() => {
-
-            });
+      if (!isNaN(boardId) && currentBoardId !== boardId) {
+         dispatch(fetchBoardTasks(boardId));
       }
-   }, [id]);
+   }, [dispatch, boardId, currentBoardId]);
 
+   // 2) Whenever tasks in Redux change, re-group them
    useEffect(() => {
-      const passedTask = location.state?.task;
-      if (passedTask) {
+      setGroupedTasks(groupTasksByStatus(boardTasks));
+   }, [boardTasks]);
 
-         setSelectedTask(passedTask);
-         setOpenTaskDialog(true);
+   // 3) On mount, open dialog if navigated here with a task, then clear location.state
+   useEffect(() => {
+      if (location.state?.task) {
+         setSelectedTask(location.state.task);
+         setOpenDialog(true);
+         // remove the task from location.state so it won't re-open
+         navigate(location.pathname, { replace: true, state: {} });
       }
-   }, [location.state]);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+   }, []); // run only once on mount
 
-   const handleTaskClick = (task: Task) => {
-      setSelectedTask(task);
-      setOpenTaskDialog(true);
-   };
-
-
-   const onDragEnd = async (result: DropResult) => {
-      const { destination, source } = result;
-      if (!destination || (destination.droppableId === source.droppableId && destination.index === source.index)) {
+   // Handlers
+   const handleDragEnd = async (result: DropResult) => {
+      const { source, destination } = result;
+      if (
+         !destination ||
+         (destination.droppableId === source.droppableId && destination.index === source.index)
+      ) {
          return;
       }
-      const prevGroupedTasks = { ...groupedTasks };
-      const newGroupedTasks = { ...groupedTasks };
-      const sourceTasks = Array.from(newGroupedTasks[source.droppableId]);
-      const [movedTask] = sourceTasks.splice(source.index, 1);
-      newGroupedTasks[source.droppableId] = sourceTasks;
 
-      const destTasks = Array.from(newGroupedTasks[destination.droppableId]);
-      destTasks.splice(destination.index, 0, movedTask);
-      newGroupedTasks[destination.droppableId] = destTasks;
-      setGroupedTasks(newGroupedTasks);
+      const prev = groupedTasks;
+      const copy = { ...groupedTasks };
+      const sourceList = Array.from(copy[source.droppableId]);
+      const [moved] = sourceList.splice(source.index, 1);
+      copy[source.droppableId] = sourceList;
+      const destList = Array.from(copy[destination.droppableId]);
+      destList.splice(destination.index, 0, moved);
+      copy[destination.droppableId] = destList;
+      setGroupedTasks(copy);
 
       try {
-         await updateTaskStatus(movedTask.id!, { status: destination.droppableId });
-      } catch (error) {
-         console.error('Ошибка обновления статуса задачи:', error);
-         setGroupedTasks(prevGroupedTasks);
+         await updateTaskStatus(moved.id!, { status: destination.droppableId });
+      } catch {
+         setGroupedTasks(prev);
       }
    };
 
-   if (error) {
+   const handleTaskClick = (task: any) => {
+      setSelectedTask(task);
+      setOpenDialog(true);
+   };
+
+   if (loading && currentBoardId === boardId) {
+      return (
+         <Box sx={{ p: 2, textAlign: 'center' }}>
+            <CircularProgress />
+         </Box>
+      );
+   }
+
+   if (error && currentBoardId === boardId) {
       return (
          <Box sx={{ p: 2, textAlign: 'center' }}>
             <Typography color="error">{error}</Typography>
@@ -111,10 +132,10 @@ export default function BoardTasks() {
             {boardName}
          </Typography>
 
-         <DragDropContext onDragEnd={onDragEnd}>
+         <DragDropContext onDragEnd={handleDragEnd}>
             <Box sx={{ display: 'flex', gap: 2 }}>
-               {(['Backlog', 'InProgress', 'Done'] as const).map((statusKey) => (
-                  <Droppable droppableId={statusKey} key={statusKey}>
+               {(['Backlog', 'InProgress', 'Done'] as const).map((status) => (
+                  <Droppable droppableId={status} key={status}>
                      {(provided, snapshot) => (
                         <Box
                            ref={provided.innerRef}
@@ -131,32 +152,30 @@ export default function BoardTasks() {
                            }}
                         >
                            <Typography variant="h6" sx={{ mb: 1 }}>
-                              {statusKey === 'Backlog'
+                              {status === 'Backlog'
                                  ? 'Не начато'
-                                 : statusKey === 'InProgress'
+                                 : status === 'InProgress'
                                     ? 'В процессе'
                                     : 'Завершено'}
                            </Typography>
-                           {groupedTasks[statusKey].map((task, index) => (
-                              <Draggable
-                                 draggableId={String(task.id)}
-                                 index={index}
-                                 key={task.id}
-                              >
-                                 {(provided, snapshot) => (
+                           {groupedTasks[status].map((task, idx) => (
+                              <Draggable key={task.id} draggableId={String(task.id)} index={idx}>
+                                 {(prov, snap) => (
                                     <Box
-                                       ref={provided.innerRef}
-                                       {...provided.draggableProps}
-                                       {...provided.dragHandleProps}
+                                       ref={prov.innerRef}
+                                       {...prov.draggableProps}
+                                       {...prov.dragHandleProps}
                                        onClick={() => handleTaskClick(task)}
                                        sx={{
                                           mb: 1,
                                           p: 1,
                                           border: '1px solid',
-                                          borderColor: snapshot.isDragging ? 'primary.main' : 'divider',
+                                          borderColor: snap.isDragging
+                                             ? 'primary.main'
+                                             : 'divider',
                                           borderRadius: 1,
                                           bgcolor: 'background.paper',
-                                          cursor: snapshot.isDragging ? 'grabbing' : 'grab',
+                                          cursor: snap.isDragging ? 'grabbing' : 'grab',
                                        }}
                                     >
                                        {task.title}
@@ -172,15 +191,14 @@ export default function BoardTasks() {
             </Box>
          </DragDropContext>
 
-         {selectedTask && (
-            <TaskDialog
-               open={openTaskDialog}
-               onClose={() => setOpenTaskDialog(false)}
-               mode="edit"
-               initialValues={selectedTask}
-               onSubmit={() => setOpenTaskDialog(false)}
-            />
-         )}
+         {/* TaskDialog for edit/create */}
+         <TaskDialog
+            open={openDialog}
+            onClose={() => setOpenDialog(false)}
+            mode={selectedTask?.id ? 'edit' : 'create'}
+            initialValues={selectedTask || {}}
+            onSubmit={() => setOpenDialog(false)}
+         />
       </Box>
    );
 }

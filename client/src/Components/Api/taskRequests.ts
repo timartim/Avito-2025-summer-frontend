@@ -59,7 +59,8 @@ export async function getTask(taskId: number): Promise<TaskFull> {
 
 
 export async function createTask(input: CreateTaskInput): Promise<{ id: number }> {
-   return await apiRequest<{ id: number }>('post', '/tasks/create', input);
+   const response = await apiRequest<{ data: {id: number} }>('post', '/tasks/create', input);
+   return response.data;
 }
 
 

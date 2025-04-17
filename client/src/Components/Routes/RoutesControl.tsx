@@ -11,6 +11,7 @@ import GlobalLoading from '../Beauty/GlobalLoading.tsx';
 import { setLoading } from '../ReduxSlices/userActionSlice.ts';
 import { RootState } from '../ReduxStore/store.ts';
 import { fetchBoards, fetchTasks, fetchUsers } from '../ReduxSlices/dataSlice.ts';
+import GlobalSnackbar from '../Beauty/GlobalSnackbar.tsx';
 
 function RoutesControl() {
    const dispatch = useDispatch();
@@ -45,6 +46,7 @@ function RoutesControl() {
       <Box sx={{ flexGrow: 1 }}>
          <CssBaseline />
          <GlobalLoading />
+         <GlobalSnackbar />
          <Box sx={{ boxShadow: 1, width: '100%' }}>
             <Toolbar sx={{ justifyContent: 'space-between' }}>
                <Box>

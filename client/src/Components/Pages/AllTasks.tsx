@@ -1,5 +1,5 @@
 // AllTasks.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo, memo, useEffect } from 'react';
 import {
    Box,
    List,
@@ -8,236 +8,231 @@ import {
    TextField,
    Button,
    Paper,
-   CircularProgress,
-   Typography,
 } from '@mui/material';
 import FilterListIcon from '@mui/icons-material/FilterList';
+import { useNavigate } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
 import TaskDialog, { Task } from '../Dialogs/TaskDialog';
 import FilterDialog, { Filter } from '../Dialogs/FilterDialog';
-import { getTasks, TaskFull } from '../Api/taskRequests';
-import '../../Styles/ButtonStyles.css';
-import { NavLink, useNavigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
-import { RootState } from '../ReduxStore/store.ts';
-import { selectTasks } from '../ReduxSlices/dataSlice.ts';
+import { RootState } from '../ReduxStore/store';
+import {
+   selectTasks,
+   createTask,
+   updateTask,
+   TaskInput,
+} from '../ReduxSlices/dataSlice';
 
-const priorityServerToRu: Record<string, string> = {
+export const priorityServerToRu: Record<string, string> = {
    High: 'Высокое',
    Medium: 'Среднее',
    Low: 'Небольшое',
 };
-
 export const priorityRuToServer: Record<string, string> = {
    'Высокое': 'High',
    'Среднее': 'Medium',
    'Небольшое': 'Low',
 };
-
-const statusServerToRu: Record<string, string> = {
+export const statusServerToRu: Record<string, string> = {
    Backlog: 'Не начато',
    InProgress: 'В процессе',
    Done: 'Выполнено',
 };
-
 export const statusRuToServer: Record<string, string> = {
    'Не начато': 'Backlog',
    'В процессе': 'InProgress',
    'Выполнено': 'Done',
 };
 
-export default function AllTasks() {
-   const [tasks, setTasks] = useState<Task[]>([]);
-   const [openTaskDialog, setOpenTaskDialog] = useState(false);
-   const [selectedTask, setSelectedTask] = useState<Partial<Task>>({});
-   const [searchText, setSearchText] = useState('');
-   const [openFilterDialog, setOpenFilterDialog] = useState(false);
+type TaskItem = Task & { assignee: { id: number }; boardId: number };
 
-   const allTasks = useSelector((state: RootState) => selectTasks(state))
-   console.log(allTasks)
-   const boards = useSelector((state => state.data.boards ?? []))
-   const navigate = useNavigate();
-   useEffect(() => {
-      setTasks(allTasks)
-   }, [allTasks]);
-   const searchedTasks = tasks.filter((task) =>
-      task.title.toLowerCase().includes(searchText.toLowerCase())
+// 👉 обёрнут в React.memo
+const TaskList = memo(function TaskList({
+                                           tasks,
+                                           boards,
+                                           onOpen,
+                                           onNav,
+                                        }: {
+   tasks: TaskItem[];
+   boards: { id: number; name: string }[];
+   onOpen: (t: TaskItem) => void;
+   onNav: (e: React.MouseEvent, t: TaskItem) => void;
+}) {
+   return (
+      <List sx={{ maxHeight: '60vh', overflowY: 'auto' }}>
+         {tasks.map((t) => (
+            <ListItem
+               key={t.id}
+               button
+               onClick={() => onOpen(t)}
+               sx={(theme) => ({
+                  py: 1,
+                  borderBottom: `1px solid ${theme.palette.divider}`,
+                  '&:last-child': { borderBottom: 'none' },
+               })}
+            >
+               <ListItemText primary={t.title} />
+               <Button
+                  variant="contained"
+                  onClick={(e) => onNav(e, t)}
+                  className='simple-button'
+               >
+                  Перейти на доску
+               </Button>
+            </ListItem>
+         ))}
+      </List>
    );
+});
 
-   const handleTaskClick = (task: TaskFull, mode: string) => {
+export default function AllTasks() {
+   const dispatch = useDispatch();
+   const allTasks = useSelector((s: RootState) => selectTasks(s));
+   const boards = useSelector((s: RootState) => s.data.boards ?? []);
+   const navigate = useNavigate();
 
-      const prRu = priorityServerToRu[task.priority] ?? task.priority;
-      const stRu = statusServerToRu[task.status] ?? task.status;
-      setSelectedTask({
-         id: task.id,
-         title: task.title,
-         description: task.description,
-         priority: prRu,
-         status: stRu,
-         assignee: { id: task.assignee.id },
-         boardName: task.boardName,
-         boardId: task.boardId
-      });
-      if (mode === 'modal'){
-         setOpenTaskDialog(true);
-      }else if(mode === 'navigate'){
-         const board = boards.find((element) => element.name === task.boardName);
-         navigate(`/board/${board.id}`, { state: { task } });
+   /*
+    * ────────────────────────────────────────────────────────────────────────
+    *  Search & filters хранятся в localStorage, чтобы не теряться из‑за
+    *  hot‑reload или строгого режима React.
+    * ────────────────────────────────────────────────────────────────────────
+    */
+   const [searchText, setSearchText] = useState<string>(() => {
+      try {
+         const saved = localStorage.getItem('allTasksSearch');
+         return saved ? JSON.parse(saved) : '';
+      } catch {
+         return '';
       }
-   };
+   });
 
-   const handleAddTask = () => {
-      setSelectedTask({
-         title: '',
-         description: '',
-         priority: 'Среднее',
-         status: '',
-         assign: { id: 0 },
-         boardName: '',
-      });
-      setOpenTaskDialog(true);
-   };
+   const [filters, setFilters] = useState<Filter>(() => {
+      try {
+         const saved = localStorage.getItem('allTasksFilters');
+         return saved ? JSON.parse(saved) : { priorities: [], statuses: [], boards: [] };
+      } catch {
+         return { priorities: [], statuses: [], boards: [] };
+      }
+   });
 
-   const handleOpenFilterDialog = () => setOpenFilterDialog(true);
-   const handleCloseFilterDialog = () => setOpenFilterDialog(false);
-   const handleApplyFilter = (filters: Filter) => {
-      setTasks(allTasks.filter(element =>
-         (filters.priorities.length > 0 ?  filters.priorities.includes(element.priority) : true) &&
-         (filters.statuses.length > 0 ?  filters.statuses.includes(element.status) : true) &&
-         (filters.boards.length > 0 ?  filters.boards.includes(element.boardName) : true)
-      ));
+   /*
+    *  Сохраняем изменения в localStorage.
+    *  Для строки поиска используем JSON.stringify — так мы придерживаемся
+    *  той же «глубокой копии», что и для объекта фильтров.
+    */
+   useEffect(() => {
+      localStorage.setItem('allTasksFilters', JSON.stringify(filters));
 
-      setOpenFilterDialog(false);
-   }
+   }, [filters]);
 
-   const handleTaskSubmit = (task: Task) => {
-      const pr = priorityRuToServer[task.priority] ?? task.priority;
-      const st =
-         task.id && task.status
-            ? statusRuToServer[task.status] ?? task.status
-            : task.status ?? '';
+   useEffect(() => {
+      localStorage.setItem('allTasksSearch', JSON.stringify(searchText));
+   }, [searchText]);
 
-      if (!task.id) {
-         const newId = Date.now();
-         setTasks((prev) => [
-            ...prev,
-            {
-               id: newId,
-               title: task.title,
-               description: task.description,
-               priority: pr || 'Medium',
-               status: st || 'Backlog',
-               assigneeId: task.assignee?.id ?? 0,
-               boardId: 0,
-               assignee: {
-                  id: task.assignee?.id ?? 0,
-                  fullName: '',
-                  email: '',
-                  avatarUrl: '',
-               },
-               boardName: task.boardName || '',
-            },
-         ]);
-      } else {
-         setTasks((prev) =>
-            prev.map((t) => {
-               if (t.id !== task.id) return t;
-               return {
-                  ...t,
-                  title: task.title,
-                  description: task.description,
-                  priority: pr,
-                  status: st,
-                  assigneeId: task.assignee?.id ?? 0,
-                  boardName: task.boardName || '',
-               };
-            })
+   /* Диалоги */
+   const [openFilter, setOpenFilter] = useState(false);
+   const [openTask, setOpenTask] = useState(false);
+   const [selTask, setSelTask] = useState<Partial<Task>>({});
+
+   // список пересчитывается при смене allTasks, searchText или filters
+   const displayed = useMemo(() => {
+      return (allTasks as TaskItem[])
+         .filter((t) =>
+            t.title.toLowerCase().includes(searchText.toLowerCase())
+         )
+         .filter((t) =>
+            filters.priorities.length
+               ? filters.priorities.includes(priorityServerToRu[t.priority] ?? t.priority)
+               : true
+         )
+         .filter((t) =>
+            filters.statuses.length
+               ? filters.statuses.includes(statusServerToRu[t.status] ?? t.status)
+               : true
+         )
+         .filter((t) =>
+            filters.boards.length ? filters.boards.includes(t.boardName) : true
          );
+   }, [allTasks, searchText, filters]);
+
+   /* ------------------------------------------------------------------ */
+
+   const openModal = (t: TaskItem | Partial<Task>) => {
+      if (t && (t as TaskItem).id) {
+         const full = t as TaskItem;
+         setSelTask({
+            id: full.id,
+            title: full.title,
+            description: full.description,
+            priority: priorityServerToRu[full.priority] ?? full.priority,
+            status: statusServerToRu[full.status] ?? full.status,
+            assignee: { id: full.assignee?.id ?? full.assigneeId },
+            boardName: full.boardName,
+            boardId: full.boardId,
+         });
+      } else {
+         setSelTask({});
       }
-      setOpenTaskDialog(false);
+      setOpenTask(true);
    };
-   function findTasks(e){
-      setSearchText(e.target.value)
-   }
+
+   const navBoard = (e: React.MouseEvent, t: TaskItem) => {
+      e.stopPropagation();
+      const b = boards.find((b) => b.name === t.boardName);
+      if (b) navigate(`/board/${b.id}`, { state: { task: t } });
+   };
+
+   const handleSubmit = (t: Task) => {
+      setOpenTask(false);
+   };
 
    return (
-      <Box sx={{ p: 2, width: '100%', height: '100%', position: 'relative' }}>
-         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+      <Box sx={{ p: 2 }}>
+         {/* Поиск и кнопка фильтров */}
+         <Box sx={{ display: 'flex', mb: 2 }}>
             <TextField
                label="Поиск"
-               variant="outlined"
                value={searchText}
-               onChange={findTasks}
-               sx={{ flexGrow: 1, mr: 2, maxWidth: '500px' }}
+               onChange={(e) => setSearchText(e.target.value)}
+               sx={{ flexGrow: 1, mr: 2, maxWidth: 500 }}
             />
             <Button
                variant="contained"
-               color="primary"
                startIcon={<FilterListIcon />}
-               className="simple-button"
-               onClick={handleOpenFilterDialog}
+               onClick={() => setOpenFilter(true)}
+               className='simple-button'
             >
                Фильтры
             </Button>
          </Box>
-         <Paper sx={(theme) => ({ p: 2, border: `1px solid ${theme.palette.divider}` })}>
-            <List sx={{ overflowY: 'auto', maxHeight: '60vh' }}>
-               {searchedTasks.map((task) => {
-                  const board = boards.find((element) => element.name === task.boardName);
 
-                  return (<ListItem
-                     key={task.id}
-                     button
-                     onClick={() => handleTaskClick(task, 'modal')}
-                     sx={(theme) => ({
-                        py: 1,
-                        borderBottom: `1px solid ${theme.palette.divider}`,
-                        '&:last-child': { borderBottom: 'none' },
-                     })}
-                  >
-                     <ListItemText primary={task.title} />
-                     {board ? (
-                        <Button
-                           variant="contained"
-                           className="nav-button"
-                           onClick={() => handleTaskClick(task, 'navigate')}
-                           sx={{ textTransform: 'none' }}
-                        >
-                           Перейти на доску
-                        </Button>
-                     ) : (
-                        <Button
-                           variant="outlined"
-                           disabled
-                           sx={{ textTransform: 'none' }}
-                        >
-                           Доска не найдена
-                        </Button>
-                     )}
-                  </ListItem>)
-            })}
-            </List>
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', p: 1 }}>
-               <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={handleAddTask}
-                  className="simple-button"
-               >
+         {/* Список задач */}
+         <Paper sx={{ p: 2, border: (t) => `1px solid ${t.palette.divider}` }}>
+            <TaskList tasks={displayed} boards={boards} onOpen={openModal} onNav={navBoard} />
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', pt: 1 }}>
+               <Button variant="contained" className='simple-button' onClick={() => openModal({})}>
                   Добавить задачу
                </Button>
             </Box>
          </Paper>
+
+         {/* Диалог задачи */}
          <TaskDialog
-            open={openTaskDialog}
-            onClose={() => setOpenTaskDialog(false)}
-            mode={selectedTask.id ? 'edit' : 'create'}
-            initialValues={selectedTask}
-            onSubmit={handleTaskSubmit}
+            open={openTask}
+            onClose={() => setOpenTask(false)}
+            mode={selTask.id ? 'edit' : 'create'}
+            initialValues={selTask}
+            onSubmit={handleSubmit}
          />
+
+         {/* Диалог фильтров */}
          <FilterDialog
-            open={openFilterDialog}
-            onClose={handleCloseFilterDialog}
-            onApplyFilter={handleApplyFilter}
+            open={openFilter}
+            initialValues={filters}
+            onClose={() => setOpenFilter(false)}
+            onApplyFilter={(f) => {
+               setFilters(JSON.parse(JSON.stringify(f)));
+               setOpenFilter(false);
+            }}
          />
       </Box>
    );
