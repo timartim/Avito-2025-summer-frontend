@@ -289,6 +289,7 @@ export default function TaskDialog({
                      )}
                   />
                ) : (
+                  task.boardName &&
                   <TextField
                      label="Проект"
                      value={task.boardName}
