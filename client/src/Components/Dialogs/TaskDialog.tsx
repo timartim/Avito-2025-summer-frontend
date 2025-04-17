@@ -80,7 +80,22 @@ export default function TaskDialog({
 
    const [task, setTask] = useState<Partial<Task>>({});
    const [errors, setErrors] = useState<Partial<Record<keyof Task, string>>>({});
+   useEffect(() => {
+      const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+         if (task.title || task.description || task.priority || task.assigneeId || task.boardId) {
+            const drafts: Partial<Task>[] = JSON.parse(localStorage.getItem('taskDialogDrafts') || '[]');
+            drafts.push({ ...task });
+            localStorage.setItem('taskDialogDrafts', JSON.stringify(drafts));
+         }
+         e.preventDefault();
+         e.returnValue = '';
+      };
 
+      window.addEventListener('beforeunload', handleBeforeUnload);
+      return () => {
+         window.removeEventListener('beforeunload', handleBeforeUnload);
+      };
+   }, [task]);
    useEffect(() => {
       const mapped: Partial<Task> = { ...initialValues };
       if (mapped.assignee && mapped.assignee.id) {
@@ -154,12 +169,6 @@ export default function TaskDialog({
 
 
    const handleCancel = () => {
-      if (mode === 'create') {
-         const draft: Partial<Task> = { ...task };
-         const existing = JSON.parse(localStorage.getItem('taskDialogDrafts') || '[]');
-         existing.push(draft);
-         localStorage.setItem('taskDialogDrafts', JSON.stringify(existing));
-      }
       onClose();
    };
 
