@@ -43,7 +43,7 @@ export const darkTheme: Theme = createTheme({
    },
    typography: {
       fontFamily: ['Arial','sans-serif'].join(','),
-      allVariants: { fontSize: 16, color: '#FFFFFF' },
+      allVariants: { fontSize: '20px', color: '#FFFFFF' },
       h1: { fontWeight: 700, fontSize: '2.5rem' },
       h2: { fontWeight: 700, fontSize: '2rem' },
    },

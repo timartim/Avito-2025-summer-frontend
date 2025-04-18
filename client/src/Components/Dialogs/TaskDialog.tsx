@@ -13,7 +13,7 @@ import {
    FormControl,
    InputLabel,
    Select,
-   MenuItem,
+   MenuItem, Avatar,
 } from '@mui/material';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '../ReduxStore/store';
@@ -237,12 +237,44 @@ export default function TaskDialog({
                   getOptionLabel={o => o.fullName}
                   value={assignees.find(a => a.id === task.assigneeId) || null}
                   onChange={handleAssigneeChange}
+
+                  ListboxProps={{
+                     style: {
+                        maxHeight: 240,
+                        overflowY: 'auto',
+                     }
+                  }}
+                  renderOption={(props, option) => (
+                     <Box
+                        component="li"
+                        {...props}
+                        key={option.id}
+                        sx={{
+                           display: 'flex',
+                           alignItems: 'flex-start',
+                           pl: 1,
+                           pr: 1,
+                           width: '100%',
+                        }}
+                     >
+                        <span>{option.fullName}</span>
+                        {option.avatarUrl && (
+                           <Avatar
+                              src={option.avatarUrl}
+                              alt={option.fullName}
+                              sx={{ width: 24, height: 24, ml: 'auto'}}
+                           />
+                        )}
+                     </Box>
+                  )}
+
                   renderInput={params => (
                      <TextField
                         {...params}
                         label="Исполнитель"
                         error={!!errors.assigneeId}
                         helperText={errors.assigneeId}
+                        fullWidth
                      />
                   )}
                />
@@ -278,6 +310,12 @@ export default function TaskDialog({
                      getOptionLabel={o => o.name}
                      value={boards.find(b => b.id === task.boardId) || null}
                      onChange={handleBoardChange}
+                     ListboxProps={{
+                        style: {
+                           maxHeight: 240,
+                           overflowY: 'auto',
+                        }
+                     }}
                      renderInput={params => (
                         <TextField
                            {...params}

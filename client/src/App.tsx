@@ -1,19 +1,25 @@
-// App.tsx
-import React, { useState } from 'react';
+// src/App.tsx
+import React, { useState, useEffect } from 'react';
 import './App.css';
 import { lightTheme } from './Styles/lightTheme';
-import { darkTheme } from './Styles/darkTheme.ts';
+import { darkTheme } from './Styles/darkTheme';
 import { BrowserRouter as Router } from 'react-router-dom';
-import { ThemeProvider, CssBaseline } from '@mui/material';
+import { ThemeProvider, CssBaseline, useMediaQuery } from '@mui/material';
 import RouteControl from './Components/Routes/RoutesControl';
 import { store } from './Components/ReduxStore/store';
 import { Provider } from 'react-redux';
-import { useMediaQuery } from '@mui/material';
 
 export type ThemeMode = 'system' | 'light' | 'dark';
 
 function App() {
-   const [mode, setMode] = useState<ThemeMode>('system');
+
+   const [mode, setMode] = useState<ThemeMode>(() => {
+      return (localStorage.getItem('appTheme') as ThemeMode) || 'system';
+   });
+
+   useEffect(() => {
+      localStorage.setItem('appTheme', mode);
+   }, [mode]);
 
    const prefersDark = useMediaQuery('(prefers-color-scheme: dark)');
    const appliedTheme =

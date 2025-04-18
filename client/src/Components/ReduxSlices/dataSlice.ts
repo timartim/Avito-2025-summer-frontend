@@ -4,7 +4,7 @@ import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { getBoards, getBoardTasks } from '../Api/boardRequests';
 import { getUsers } from '../Api/userRequests';
 import { getTasks } from '../Api/taskRequests';
-import { createTask as apiCreateTask, updateTaskStatus as apiUpdateTaskStatus } from '../Api/taskRequests';
+import { createTask as apiCreateTask, updateTaskStatus as apiUpdateTaskStatus, updateTask as apiUpdateTask} from '../Api/taskRequests';
 import { RootState } from '../ReduxStore/store';
 import { Assignee, Board, Status, Task } from '../../Interfaces/appInterfaces.ts';
 

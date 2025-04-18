@@ -1,6 +1,6 @@
 // src/Components/Routes/RoutesControl.tsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
    AppBar,
    Toolbar,
@@ -21,7 +21,7 @@ import RestoreIcon from '@mui/icons-material/Restore';
 import { fetchBoards, fetchTasks, fetchUsers } from '../ReduxSlices/dataSlice';
 import { RootState } from '../ReduxStore/store';
 import '../../Styles/ButtonStyles.css';
-import DraftsDialog from '../Dialogs/DraftDialog.tsx';
+import DraftsDialog from '../Dialogs/DraftDialog';
 
 export type ThemeMode = 'system' | 'light' | 'dark';
 
@@ -32,6 +32,10 @@ interface RoutesControlProps {
 
 export default function RoutesControl({ mode, onModeChange }: RoutesControlProps) {
    const dispatch = useDispatch();
+
+   const appBarRef = useRef<HTMLDivElement>(null);
+   const [appBarHeight, setAppBarHeight] = useState(0);
+
    const [openTaskDialog, setOpenTaskDialog] = useState(false);
    const [openSettings, setOpenSettings] = useState(false);
    const [openDrafts, setOpenDrafts] = useState(false);
@@ -42,7 +46,6 @@ export default function RoutesControl({ mode, onModeChange }: RoutesControlProps
          return [];
       }
    });
-
    const [restoredDraft, setRestoredDraft] = useState<Partial<Task>>({});
 
    const isLoading = useSelector((state: RootState) => state.data.isLoading);
@@ -54,10 +57,20 @@ export default function RoutesControl({ mode, onModeChange }: RoutesControlProps
       dispatch(fetchTasks());
    }, [dispatch]);
 
+   useEffect(() => {
+      const measure = () => {
+         if (appBarRef.current) {
+            setAppBarHeight(appBarRef.current.offsetHeight);
+         }
+      };
+      measure();
+      window.addEventListener('resize', measure);
+      return () => window.removeEventListener('resize', measure);
+   }, []);
+
    const handleTaskSubmit = (task: Task) => {
       console.log('Новая/отредактированная задача:', task);
       setOpenTaskDialog(false);
-      // clear restored draft
       setRestoredDraft({});
    };
 
@@ -76,12 +89,13 @@ export default function RoutesControl({ mode, onModeChange }: RoutesControlProps
    };
 
    return (
-      <Box sx={{ flexGrow: 1 }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
          <CssBaseline />
          <GlobalLoading />
          <GlobalSnackbar />
 
-         <AppBar position="static" elevation={1} color="default">
+         {/* Привязываем ref, чтобы мерить высоту */}
+         <AppBar ref={appBarRef} elevation={1} color="default">
             <Toolbar sx={{ justifyContent: 'space-between' }}>
                <Box>
                   <Button
@@ -111,7 +125,6 @@ export default function RoutesControl({ mode, onModeChange }: RoutesControlProps
                      variant="contained"
                      color="primary"
                      onClick={() => {
-                        // new task (no draft)
                         setRestoredDraft({});
                         setOpenTaskDialog(true);
                      }}
@@ -139,7 +152,14 @@ export default function RoutesControl({ mode, onModeChange }: RoutesControlProps
             </Toolbar>
          </AppBar>
 
-         <Box sx={{ width: '100vw', height: '100vh', p: 2 }}>
+         <Box
+            sx={{
+               width: '100vw',
+               flex: 1,
+               overflow: 'auto',
+               pt: `${appBarHeight}px`,
+            }}
+         >
             {!isLoading && <RoutesConfig />}
          </Box>
 
@@ -154,7 +174,6 @@ export default function RoutesControl({ mode, onModeChange }: RoutesControlProps
             saveOnCancel={Object.keys(restoredDraft).length === 0}
             onSubmit={handleTaskSubmit}
          />
-
 
          <DraftsDialog
             open={openDrafts}

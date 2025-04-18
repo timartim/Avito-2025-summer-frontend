@@ -104,7 +104,7 @@ export default function DraftsDialog({
                ) : (
                   <List>
                      {drafts.map((d, idx) => (
-                        <ListItem key={idx} divider>
+                        <ListItem key={idx} divider sx={{p: 1}}>
                            <ListItemText
                               primary={d.title || `без названия ${idx + 1}`}
                               secondary={
@@ -120,7 +120,7 @@ export default function DraftsDialog({
                               >
                                  <RestoreIcon />
                               </IconButton>
-                              <IconButton edge="end" onClick={() => handleDelete(idx)}>
+                              <IconButton edge="end" onClick={() => handleDelete(idx)} sx={{ml: 2}}>
                                  <DeleteIcon />
                               </IconButton>
                            </ListItemSecondaryAction>

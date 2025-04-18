@@ -12,13 +12,6 @@ export default function AllBoards() {
    const boards    = useSelector((state: RootState) => selectBoards(state));
    const error     = useSelector((state: RootState) => selectError(state));
 
-   if (error) {
-      return (
-         <Box sx={{ p: 2, textAlign: 'center' }}>
-            <Typography color="error">{error}</Typography>
-         </Box>
-      );
-   }
 
    return (
       <Box sx={{ p: 2 }}>
