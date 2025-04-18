@@ -23,12 +23,9 @@ import {
    priorityServerToRu,
    statusServerToRu,
 } from '../Pages/AllTasks';
+import { Filter } from '../../Interfaces/serviceInterfaces.ts';
 
-export interface Filter {
-   priorities: string[];
-   statuses: string[];
-   boards: string[];
-}
+
 
 interface FilterDialogProps {
    open: boolean;

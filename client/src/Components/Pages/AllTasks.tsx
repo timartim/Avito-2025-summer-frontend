@@ -12,16 +12,17 @@ import {
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import TaskDialog, { Task } from '../Dialogs/TaskDialog';
-import FilterDialog, { Filter } from '../Dialogs/FilterDialog';
 import { RootState } from '../ReduxStore/store';
 import {
    selectTasks,
    createTask,
    updateTask,
-   TaskInput,
 } from '../ReduxSlices/dataSlice';
 import AddIcon from '@mui/icons-material/Add';
+import { Task } from '../../Interfaces/appInterfaces.ts';
+import FilterDialog from '../Dialogs/FilterDialog.tsx';
+import TaskDialog from '../Dialogs/TaskDialog.tsx';
+import { Filter } from '../../Interfaces/serviceInterfaces.ts';
 export const priorityServerToRu: Record<string, string> = {
    High: 'Высокое',
    Medium: 'Среднее',
@@ -43,19 +44,18 @@ export const statusRuToServer: Record<string, string> = {
    'Выполнено': 'Done',
 };
 
-type TaskItem = Task & { assignee: { id: number }; boardId: number };
 
-// 👉 обёрнут в React.memo
+
 const TaskList = memo(function TaskList({
                                            tasks,
                                            boards,
                                            onOpen,
                                            onNav,
                                         }: {
-   tasks: TaskItem[];
+   tasks: Task[];
    boards: { id: number; name: string }[];
-   onOpen: (t: TaskItem) => void;
-   onNav: (e: React.MouseEvent, t: TaskItem) => void;
+   onOpen: (t: Task) => void;
+   onNav: (e: React.MouseEvent, t: Task) => void;
 }) {
    return (
       <List sx={{ maxHeight: '60vh', overflowY: 'auto' }}>
@@ -135,18 +135,18 @@ export default function AllTasks() {
 
    // список пересчитывается при смене allTasks, searchText или filters
    const displayed = useMemo(() => {
-      return (allTasks as TaskItem[])
+      return (allTasks as Task[])
          .filter((t) =>
             t.title.toLowerCase().includes(searchText.toLowerCase())
          )
          .filter((t) =>
             filters.priorities.length
-               ? filters.priorities.includes(priorityServerToRu[t.priority] ?? t.priority)
+               ? filters.priorities.includes(t.priority)
                : true
          )
          .filter((t) =>
             filters.statuses.length
-               ? filters.statuses.includes(statusServerToRu[t.status] ?? t.status)
+               ? filters.statuses.includes(t.status ?? "")
                : true
          )
          .filter((t) =>
@@ -156,9 +156,9 @@ export default function AllTasks() {
 
    /* ------------------------------------------------------------------ */
 
-   const openModal = (t: TaskItem | Partial<Task>) => {
-      if (t && (t as TaskItem).id) {
-         const full = t as TaskItem;
+   const openModal = (t: Task | Partial<Task>) => {
+      if (t && (t as Task).id) {
+         const full = t as Task;
          setSelTask({
             id: full.id,
             title: full.title,
@@ -175,13 +175,13 @@ export default function AllTasks() {
       setOpenTask(true);
    };
 
-   const navBoard = (e: React.MouseEvent, t: TaskItem) => {
+   const navBoard = (e: React.MouseEvent, t: Task) => {
       e.stopPropagation();
       const b = boards.find((b) => b.name === t.boardName);
       if (b) navigate(`/board/${b.id}`, { state: { task: t } });
    };
 
-   const handleSubmit = (t: Task) => {
+   const handleSubmit = () => {
       setOpenTask(false);
    };
 

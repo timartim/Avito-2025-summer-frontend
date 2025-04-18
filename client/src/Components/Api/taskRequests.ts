@@ -1,44 +1,8 @@
 // apiTasks.ts
 import { apiRequest } from './apiRequest';
+import { Task } from './boardRequests.ts';
+import { CreateTaskInput, UpdateTaskInput } from '../../Interfaces/appInterfaces.ts';
 
-
-export interface Assignee {
-   id: number;
-   fullName: string;
-   email: string;
-   avatarUrl: string;
-}
-
-
-export interface TaskFull {
-   id: number;
-   title: string;
-   description: string;
-   priority: 'Небольшое' | 'Среднее' | 'Высокое' | string;
-   status: 'Не начато' | 'В процессе' | 'Выполнено' | string;
-   assignee: Assignee;
-   assigneeId: number;
-   boardId: number;
-   boardName: string;
-}
-
-
-export interface CreateTaskInput {
-   assigneeId: number;
-   boardId: number;
-   description: string;
-   priority: 'Небольшое' | 'Среднее' | 'Высокое' | string;
-   title: string;
-}
-
-
-export interface UpdateTaskInput {
-   assigneeId: number;
-   description: string;
-   priority: 'Небольшое' | 'Среднее' | 'Высокое' | string;
-   status: 'Не начато' | 'В процессе' | 'Выполнено' | string;
-   title: string;
-}
 
 
 export interface UpdateTaskStatusInput {
@@ -46,14 +10,14 @@ export interface UpdateTaskStatusInput {
 }
 
 
-export async function getTasks(): Promise<TaskFull[]> {
-   const response = await apiRequest<{ data: TaskFull[] }>('get', '/tasks');
+export async function getTasks(): Promise<Task[]> {
+   const response = await apiRequest<{ data: Task[] }>('get', '/tasks');
    return response.data;
 }
 
 
-export async function getTask(taskId: number): Promise<TaskFull> {
-   const response = await apiRequest<{ data: TaskFull }>('get', `/tasks/${taskId}`);
+export async function getTask(taskId: number): Promise<Task> {
+   const response = await apiRequest<{ data: Task }>('get', `/tasks/${taskId}`);
    return response.data;
 }
 

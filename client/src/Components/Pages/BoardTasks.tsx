@@ -22,17 +22,13 @@ import {
    selectLoading as selectBoardLoading,
    selectError as selectBoardError,
 } from '../ReduxSlices/dataSlice';
-import { updateTaskStatus } from '../Api/taskRequests';
+import { updateTaskStatus } from '../ReduxSlices/dataSlice.ts';
+import { Task } from '../../Interfaces/appInterfaces.ts';
 
 interface RouteParams {
    id: string;
 }
 
-const groupTasksByStatus = (tasks: Array<{ id?: number; status: string; title: string }>) => ({
-   Backlog: tasks.filter((t) => t.status === 'Backlog'),
-   InProgress: tasks.filter((t) => t.status === 'InProgress'),
-   Done: tasks.filter((t) => t.status === 'Done'),
-});
 
 export default function BoardTasks() {
    const { id } = useParams<RouteParams>();
@@ -41,15 +37,13 @@ export default function BoardTasks() {
    const navigate = useNavigate();
    const dispatch = useDispatch<AppDispatch>();
 
-   const boardTasks = useSelector(selectBoardTasks);
+   const groupedTasks = useSelector(selectBoardTasks);
    const currentBoardId = useSelector(selectCurrentBoard);
    const loading = useSelector(selectBoardLoading);
    const error = useSelector(selectBoardError);
    const boards = useSelector((s: RootState) => s.data.boards);
 
    const boardName = boards.find((b) => b.id === boardId)?.name || 'Доска не найдена';
-
-   const [groupedTasks, setGroupedTasks] = useState(groupTasksByStatus(boardTasks));
    const [selectedTask, setSelectedTask] = useState<any>(null);
    const [openDialog, setOpenDialog] = useState(false);
 
@@ -59,22 +53,17 @@ export default function BoardTasks() {
       }
    }, [dispatch, boardId, currentBoardId]);
 
-   useEffect(() => {
-      setGroupedTasks(groupTasksByStatus(boardTasks));
-   }, [boardTasks]);
 
 
    useEffect(() => {
       if (location.state?.task) {
          setSelectedTask(location.state.task);
          setOpenDialog(true);
-
          navigate(location.pathname, { replace: true, state: {} });
       }
-
    }, []);
 
-   const handleDragEnd = async (result: DropResult) => {
+   const handleDragEnd = (result: DropResult) => {
       const { source, destination } = result;
       if (
          !destination ||
@@ -83,22 +72,22 @@ export default function BoardTasks() {
          return;
       }
 
-      const prev = groupedTasks;
-      const copy = { ...groupedTasks };
-      const sourceList = Array.from(copy[source.droppableId]);
+      const newGrouped = { ...groupedTasks };
+      const sourceList = Array.from(newGrouped[source.droppableId]);
       const [moved] = sourceList.splice(source.index, 1);
-      copy[source.droppableId] = sourceList;
-      const destList = Array.from(copy[destination.droppableId]);
-      destList.splice(destination.index, 0, moved);
-      copy[destination.droppableId] = destList;
-      setGroupedTasks(copy);
+      newGrouped[source.droppableId] = sourceList;
 
-      try {
-         await updateTaskStatus(moved.id!, { status: destination.droppableId });
-      } catch {
-         setGroupedTasks(prev);
-      }
+      const destList = Array.from(newGrouped[destination.droppableId]);
+      destList.splice(destination.index, 0, moved);
+      newGrouped[destination.droppableId] = destList;
+
+
+      dispatch(updateTaskStatus({
+         id: moved.id!,
+         status: destination.droppableId as 'Backlog' | 'InProgress' | 'Done'
+      }));
    };
+
 
    const handleTaskClick = (task: any) => {
       setSelectedTask(task);
@@ -123,7 +112,7 @@ export default function BoardTasks() {
 
    return (
       <Box sx={{ p: 2 }}>
-         <Typography sx={{fontSize: '25px', fontWeight: 'bold', m: 1}}>
+         <Typography sx={{ fontSize: '25px', fontWeight: 'bold', m: 1 }}>
             {boardName}
          </Typography>
 
@@ -133,51 +122,66 @@ export default function BoardTasks() {
                   <Droppable droppableId={status} key={status}>
                      {(provided, snapshot) => (
                         <Box
-                           ref={provided.innerRef}
-                           {...provided.droppableProps}
                            sx={{
                               flex: 1,
-                              maxHeight: '70vh',
-                              overflowY: 'auto',
                               border: '1px solid',
                               borderColor: 'divider',
                               borderRadius: 2,
-                              p: 1,
+                              display: 'flex',
+                              flexDirection: 'column',
+                              height: '100%',
                            }}
                         >
-                           <Typography sx={{ mb: 1, fontSize: '20px', fontWeight: 'bold' }}>
-                              {status === 'Backlog'
-                                 ? 'Не начато'
-                                 : status === 'InProgress'
-                                    ? 'В процессе'
-                                    : 'Завершено'}
-                           </Typography>
-                           {groupedTasks[status].map((task, idx) => (
-                              <Draggable key={task.id} draggableId={String(task.id)} index={idx}>
-                                 {(prov, snap) => (
-                                    <Box
-                                       ref={prov.innerRef}
-                                       {...prov.draggableProps}
-                                       {...prov.dragHandleProps}
-                                       onClick={() => handleTaskClick(task)}
-                                       sx={{
-                                          mb: 1,
-                                          p: 1,
-                                          border: '1px solid',
-                                          borderColor: snap.isDragging
-                                             ? 'primary.main'
-                                             : 'divider',
-                                          borderRadius: 1,
-                                          bgcolor: 'background.paper',
-                                          cursor: snap.isDragging ? 'grabbing' : 'grab',
-                                       }}
-                                    >
-                                       {task.title}
-                                    </Box>
-                                 )}
-                              </Draggable>
-                           ))}
-                           {provided.placeholder}
+                           {/* Заголовок вне скролла */}
+                              <Typography sx={{ p: 1, mb: 1, fontSize: '20px', fontWeight: 'bold' }}>
+                                 {status === 'Backlog'
+                                    ? 'Не начато'
+                                    : status === 'InProgress'
+                                       ? 'В процессе'
+                                       : 'Завершено'}
+                              </Typography>
+
+                              {/* Скроллыбельная область тасок */}
+                              <Box
+                                 ref={provided.innerRef}
+                                 {...provided.droppableProps}
+                                 sx={{
+                                    flexGrow: 1,
+                                    maxHeight: '70vh',
+                                    minHeight: '80px',
+                                    overflowY: 'auto',
+                                    p: 1,
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: 1,
+                                 }}
+                              >
+                                 {groupedTasks[status].map((task, idx) => (
+                                    <Draggable key={task.id} draggableId={String(task.id)} index={idx}>
+                                       {(prov, snap) => (
+                                          <Box
+                                             ref={prov.innerRef}
+                                             {...prov.draggableProps}
+                                             {...prov.dragHandleProps}
+                                             onClick={() => handleTaskClick(task)}
+                                             sx={{
+                                                p: 1,
+                                                border: '1px solid',
+                                                borderColor: snap.isDragging
+                                                   ? 'primary.main'
+                                                   : 'divider',
+                                                borderRadius: 1,
+                                                bgcolor: 'background.paper',
+                                                cursor: snap.isDragging ? 'grabbing' : 'grab',
+                                             }}
+                                          >
+                                             {task.title}
+                                          </Box>
+                                       )}
+                                    </Draggable>
+                                 ))}
+                                 {provided.placeholder}
+                              </Box>
                         </Box>
                      )}
                   </Droppable>

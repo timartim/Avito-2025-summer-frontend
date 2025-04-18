@@ -22,19 +22,9 @@ import {
    updateTask as updateTaskThunk,
    selectLoading as selectDataLoading,
 } from '../ReduxSlices/dataSlice';
-import { Board, Assignee } from '../ReduxSlices/dataSlice';
+import { Assignee, Board, Task } from '../../Interfaces/appInterfaces.ts';
 
-export interface Task {
-   id?: number;
-   title: string;
-   description: string;
-   priority: 'Небольшое' | 'Среднее' | 'Высокое' | string;
-   status?: 'Не начато' | 'В процессе' | 'Выполнено' | string;
-   assigneeId: number;
-   assignee: Assignee;
-   boardName: string;
-   boardId: number;
-}
+
 
 interface TaskDialogProps {
    open: boolean;

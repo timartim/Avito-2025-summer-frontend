@@ -1,4 +1,4 @@
-# Dockerfile.frontend
+# Dockerfile
 
 # 1) Stage: сборка приложения
 FROM node:20-alpine AS build

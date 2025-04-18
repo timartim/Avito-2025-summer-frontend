@@ -1,35 +1,7 @@
 // apiTeams.ts
 import { apiRequest } from './apiRequest';
+import { Team, TeamDetail } from '../../Interfaces/appInterfaces.ts';
 
-export interface Team {
-   id: number;
-   name: string;
-   description: string;
-   boardsCount: number;
-   usersCount: number;
-}
-
-export interface Board {
-   id: number;
-   name: string;
-   description: string;
-}
-
-export interface User {
-   id: number;
-   fullName: string;
-   email: string;
-   avatarUrl: string;
-   description?: string;
-}
-
-export interface TeamDetail {
-   id: number;
-   name: string;
-   description: string;
-   boards: Board[];
-   users: User[];
-}
 
 
 export async function getTeams(): Promise<Team[]> {

@@ -1,35 +1,10 @@
 // apiRequests.ts
 import { apiRequest } from './apiRequest';
+import { Assignee, Board, Priority, Status, Task } from '../../Interfaces/appInterfaces.ts';
 
 
-export interface Board {
-   id: number;
-   name: string;
-   description: string;
-   taskCount: number;
-}
 
 
-export interface Assignee {
-   id: number;
-   fullName: string;
-   email: string;
-   avatarUrl: string;
-}
-
-
-export type Priority = 'Небольшое' | 'Среднее' | 'Высокое';
-export type Status = 'Не начато' | 'В процессе' | 'Выполнено';
-
-// Интерфейс для задачи
-export interface Task {
-   id: number;
-   title: string;
-   description: string;
-   priority: Priority;
-   status: Status;
-   assignee: Assignee;
-}
 
 
 export async function getBoards(): Promise<Board[]> {

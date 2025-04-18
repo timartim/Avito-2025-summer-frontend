@@ -1,25 +1,9 @@
 // apiUsers.ts
 import { apiRequest } from './apiRequest';
+import { UserFull, UserTask } from '../../Interfaces/appInterfaces.ts';
 
-export interface UserFull {
-   id: number;
-   fullName: string;
-   email: string;
-   avatarUrl: string;
-   description?: string;
-   tasksCount: number;
-   teamId: number;
-   teamName: string;
-}
 
-export interface UserTask {
-   id: number;
-   title: string;
-   description: string;
-   priority: 'Небольшое' | 'Среднее' | 'Высокое' | 'Low' | 'Medium' | 'High' | string;
-   status: 'Не начато' | 'В процессе' | 'Выполнено' | 'ToDo' | 'InProgress' | 'Done' | string;
-   boardName: string;
-}
+
 
 export async function getUsers(): Promise<UserFull[]> {
 
