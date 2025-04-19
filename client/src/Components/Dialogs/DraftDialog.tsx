@@ -1,6 +1,5 @@
 // src/Components/Dialogs/DraftsDialog.tsx
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
    Dialog,
    DialogTitle,
@@ -9,14 +8,11 @@ import {
    Button,
    Box,
    List,
-   ListItem,
-   ListItemText,
-   ListItemSecondaryAction,
-   IconButton,
 } from '@mui/material';
-import RestoreIcon from '@mui/icons-material/Restore';
-import DeleteIcon from '@mui/icons-material/Delete';
-import TaskDialog, { Task } from '../Dialogs/TaskDialog';
+import TaskDialog from '../Dialogs/TaskDialog';
+import { useTaskDrafts } from '../Hooks/useTaskDrafts';
+import { DraftItem } from '../Beauty/DraftItem.tsx';
+import { Task } from '../Interfaces/appInterfaces';
 
 interface DraftsDialogProps {
    open: boolean;
@@ -29,68 +25,51 @@ export default function DraftsDialog({
                                         onClose,
                                         onRestore,
                                      }: DraftsDialogProps) {
-   const [drafts, setDrafts] = useState<Partial<Task>[]>([]);
+   const { drafts, load, remove } = useTaskDrafts();
    const [openTask, setOpenTask] = useState(false);
-   const [selectedDraft, setSelectedDraft] = useState<Partial<Task> | null>(null);
-   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-
-   const loadDrafts = () => {
-      try {
-         const saved = JSON.parse(
-            localStorage.getItem('taskDialogDrafts') || '[]'
-         ) as Partial<Task>[];
-         setDrafts(saved);
-      } catch {
-         setDrafts([]);
-      }
-   };
+   const [selected, setSelected] = useState<{
+      draft: Partial<Task>;
+      index: number;
+   } | null>(null);
 
    useEffect(() => {
-      if (open) loadDrafts();
-   }, [open]);
+      if (open) load();
+   }, [open, load]);
 
-   const handleDelete = (idx: number) => {
-      const updated = drafts.filter((_, i) => i !== idx);
-      setDrafts(updated);
-      localStorage.setItem('taskDialogDrafts', JSON.stringify(updated));
-   };
+   const handleDelete = useCallback((idx: number) => {
+      remove(idx);
+   }, [remove]);
 
-   const handleRestoreClick = (draft: Partial<Task>, idx: number) => {
-      onClose();
-      setSelectedDraft(draft);
-      setSelectedIndex(idx);
-      setOpenTask(true);
-   };
+   const handleRestore = useCallback(
+      (draft: Partial<Task>, idx: number) => {
+         onClose();
+         setSelected({ draft, index: idx });
+         setOpenTask(true);
+      },
+      [onClose]
+   );
 
-   const handleTaskClose = () => {
+   const handleTaskClose = useCallback(() => {
       setOpenTask(false);
-      setSelectedDraft(null);
-      setSelectedIndex(null);
-      loadDrafts();
-   };
+      setSelected(null);
+      load();
+   }, [load]);
 
-   const handleTaskSubmit = (created: Task) => {
-      onRestore(created);
-      if (selectedIndex !== null) {
-         handleDelete(selectedIndex);
-      }
-      setOpenTask(false);
-      setSelectedDraft(null);
-      setSelectedIndex(null);
-   };
-
-   const handleClose = () => {
-      setSelectedDraft(null);
-      setSelectedIndex(null);
-      loadDrafts();
-      onClose();
-   };
+   const handleTaskSubmit = useCallback(
+      (created: Task) => {
+         onRestore(created);
+         if (selected) remove(selected.index);
+         setOpenTask(false);
+         setSelected(null);
+      },
+      [onRestore, remove, selected]
+   );
 
    return (
       <>
          <Dialog
             open={open}
-            onClose={handleClose}
+            onClose={onClose}
             maxWidth="md"
             fullWidth
             PaperProps={{ style: { minHeight: '60vh', maxHeight: '80vh' } }}
@@ -104,46 +83,31 @@ export default function DraftsDialog({
                ) : (
                   <List>
                      {drafts.map((d, idx) => (
-                        <ListItem key={idx} divider sx={{p: 1}}>
-                           <ListItemText
-                              primary={d.title || `без названия ${idx + 1}`}
-                              secondary={
-                                 d.description
-                                    ? d.description.substring(0, 100) + '…'
-                                    : ''
-                              }
-                           />
-                           <ListItemSecondaryAction>
-                              <IconButton
-                                 edge="end"
-                                 onClick={() => handleRestoreClick(d, idx)}
-                              >
-                                 <RestoreIcon />
-                              </IconButton>
-                              <IconButton edge="end" onClick={() => handleDelete(idx)} sx={{ml: 2}}>
-                                 <DeleteIcon />
-                              </IconButton>
-                           </ListItemSecondaryAction>
-                        </ListItem>
+                        <DraftItem
+                           key={idx}
+                           draft={d}
+                           index={idx}
+                           onRestore={handleRestore}
+                           onDelete={handleDelete}
+                        />
                      ))}
                   </List>
                )}
             </DialogContent>
             <DialogActions>
-               <Button onClick={handleClose} variant="contained">
+               <Button onClick={onClose} variant="contained">
                   Закрыть
                </Button>
             </DialogActions>
          </Dialog>
 
-         {selectedDraft && (
+         {selected && (
             <TaskDialog
                open={openTask}
                onClose={handleTaskClose}
                mode="create"
-               initialValues={selectedDraft}
+               initialValues={selected.draft}
                onSubmit={handleTaskSubmit}
-
             />
          )}
       </>

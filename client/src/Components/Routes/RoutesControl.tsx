@@ -12,7 +12,7 @@ import {
 import { NavLink, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import RoutesConfig from './RoutesConfig';
-import TaskDialog, { Task } from '../Dialogs/TaskDialog';
+import TaskDialog from '../Dialogs/TaskDialog';
 import GlobalLoading from '../Beauty/GlobalLoading';
 import GlobalSnackbar from '../Beauty/GlobalSnackbar';
 import SettingsDialog from '../Dialogs/SettingsDialog';
@@ -69,7 +69,6 @@ export default function RoutesControl({ mode, onModeChange }: RoutesControlProps
    }, []);
 
    const handleTaskSubmit = (task: Task) => {
-      console.log('Новая/отредактированная задача:', task);
       setOpenTaskDialog(false);
       setRestoredDraft({});
    };

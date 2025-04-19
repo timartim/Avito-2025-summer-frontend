@@ -11,7 +11,7 @@ import {
    Select,
    MenuItem,
 } from '@mui/material';
-import { ThemeMode } from '../../App';
+import { ThemeMode } from '../Constants/storageKeys.ts';
 
 interface Props {
    open: boolean;

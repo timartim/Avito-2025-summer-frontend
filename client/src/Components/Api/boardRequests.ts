@@ -17,6 +17,5 @@ export async function getBoards(): Promise<Board[]> {
 
 export async function getBoardTasks(boardId: number): Promise<Task[]> {
    const response = await apiRequest<{data: Task[]}>('get', `/boards/${boardId}`);
-   console.log(response)
    return response.data;
 }

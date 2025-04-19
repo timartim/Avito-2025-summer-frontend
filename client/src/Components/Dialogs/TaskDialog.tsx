@@ -1,6 +1,6 @@
 // src/Dialogs/TaskDialog.tsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
    Dialog,
    DialogTitle,
@@ -13,46 +13,30 @@ import {
    FormControl,
    InputLabel,
    Select,
-   MenuItem, Avatar,
+   MenuItem,
+   Avatar,
 } from '@mui/material';
 import { useDispatch, useSelector } from 'react-redux';
-import { AppDispatch, RootState } from '../ReduxStore/store';
+import { AppDispatch } from '../ReduxStore/store';
 import {
    createTask as createTaskThunk,
    updateTask as updateTaskThunk,
    selectLoading as selectDataLoading,
+   selectUsers,
+   selectBoards,
 } from '../ReduxSlices/dataSlice';
-import { Assignee, Board, Task } from '../../Interfaces/appInterfaces.ts';
+import { Task} from '../Interfaces/appInterfaces';
 
+const PRIORITY_LABELS = ['Небольшое', 'Среднее', 'Высокое'] as const;
+const STATUS_LABELS = ['Не начато', 'В процессе', 'Выполнено'] as const;
 
-
-interface TaskDialogProps {
-   open: boolean;
-   onClose: () => void;
-   mode: 'edit' | 'create';
-   initialValues: Partial<Task>;
-   onSubmit: (task: Task) => void;
-}
-
-const priorityServerToRu: Record<string, string> = {
-   High: 'Высокое',
-   Medium: 'Среднее',
-   Low: 'Небольшое',
+const toRu = {
+   priority: { High: 'Высокое', Medium: 'Среднее', Low: 'Небольшое' },
+   status: { Backlog: 'Не начато', InProgress: 'В процессе', Done: 'Выполнено' },
 };
-const priorityRuToServer: Record<string, string> = {
-   'Высокое': 'High',
-   'Среднее': 'Medium',
-   'Небольшое': 'Low',
-};
-const statusServerToRu: Record<string, string> = {
-   Backlog: 'Не начато',
-   InProgress: 'В процессе',
-   Done: 'Выполнено',
-};
-const statusRuToServer: Record<string, string> = {
-   'Не начато': 'Backlog',
-   'В процессе': 'InProgress',
-   'Выполнено': 'Done',
+const toServer = {
+   priority: { 'Высокое': 'High', 'Среднее': 'Medium', 'Небольшое': 'Low' },
+   status: { 'Не начато': 'Backlog', 'В процессе': 'InProgress', 'Выполнено': 'Done' },
 };
 
 export default function TaskDialog({
@@ -61,213 +45,169 @@ export default function TaskDialog({
                                       mode,
                                       initialValues,
                                       onSubmit,
-                                   }: TaskDialogProps) {
+                                   }: {
+   open: boolean;
+   onClose: () => void;
+   mode: 'create' | 'edit';
+   initialValues: Partial<Task>;
+   onSubmit: (task: Task) => void;
+}) {
    const dispatch = useDispatch<AppDispatch>();
-   const loading = useSelector((state: RootState) => selectDataLoading(state));
-
-   const assignees = useSelector((state: RootState) => state.data.users);
-   const boards = useSelector((state: RootState) => state.data.boards);
+   const loading = useSelector(selectDataLoading);
+   const users = useSelector(selectUsers);
+   const boards = useSelector(selectBoards);
 
    const [task, setTask] = useState<Partial<Task>>({});
    const [errors, setErrors] = useState<Partial<Record<keyof Task, string>>>({});
+
+   // Auto-save draft on unload
    useEffect(() => {
-      const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      const saveDraft = (e: BeforeUnloadEvent) => {
          if (task.title || task.description || task.priority || task.assigneeId || task.boardId) {
-            const drafts: Partial<Task>[] = JSON.parse(localStorage.getItem('taskDialogDrafts') || '[]');
-            drafts.push({ ...task });
+            const drafts = JSON.parse(localStorage.getItem('taskDialogDrafts') || '[]');
+            drafts.push(task);
             localStorage.setItem('taskDialogDrafts', JSON.stringify(drafts));
          }
          e.preventDefault();
          e.returnValue = '';
       };
-
-      window.addEventListener('beforeunload', handleBeforeUnload);
-      return () => {
-         window.removeEventListener('beforeunload', handleBeforeUnload);
-      };
+      window.addEventListener('beforeunload', saveDraft);
+      return () => window.removeEventListener('beforeunload', saveDraft);
    }, [task]);
+
+   // Initialize form state when dialog opens or initialValues change
    useEffect(() => {
-      const mapped: Partial<Task> = { ...initialValues };
-      if (mapped.assignee && mapped.assignee.id) {
-         mapped.assigneeId = mapped.assignee.id;
+      if (!open) return;
+      const m: Partial<Task> = { ...initialValues };
+
+      // map assignee
+      if (m.assignee?.id) m.assigneeId = m.assignee.id;
+      else if (m.assigneeId) {
+         const user = users.find(u => u.id === m.assigneeId);
+         if (user) m.assignee = user;
       }
+
+      // convert server → RU labels
       if (mode === 'edit') {
-         if (mapped.priority && priorityServerToRu[mapped.priority]) {
-            mapped.priority = priorityServerToRu[mapped.priority];
-         }
-         if (mapped.status && statusServerToRu[mapped.status]) {
-            mapped.status = statusServerToRu[mapped.status];
-         }
+         if (m.priority && toRu.priority[m.priority]) m.priority = toRu.priority[m.priority];
+         if (m.status && toRu.status[m.status]) m.status = toRu.status[m.status];
       }
-      if (mapped.assigneeId && !mapped.assignee) {
-         const found = assignees.find(a => a.id === mapped.assigneeId);
-         if (found) mapped.assignee = found;
-      }
+
       setTask({
-         ...mapped,
-         boardName: mapped.boardName || '',
-         boardId: mapped.boardId || 0,
+         title: m.title || '',
+         description: m.description || '',
+         assignee: m.assignee,
+         assigneeId: m.assigneeId || 0,
+         priority: m.priority || '',
+         status: m.status || '',
+         boardName: m.boardName || '',
+         boardId: m.boardId || 0,
       });
       setErrors({});
-   }, [initialValues, open, mode, assignees]);
+   }, [open, initialValues, mode, users]);
 
-   const handleChange = (prop: keyof Task) =>
-      (e: React.ChangeEvent<HTMLInputElement>) => {
-         setTask(prev => ({ ...prev, [prop]: e.target.value }));
-      };
+   // Generic field updater
+   const handleField = useCallback(
+      <K extends keyof Task>(field: K, value: any) => {
+         setTask(prev => ({ ...prev, [field]: value }));
+      },
+      []
+   );
 
-   const handleAssigneeChange = (_: any, value: Assignee | null) => {
-      setTask(prev => ({
-         ...prev,
-         assignee: value || ({} as Assignee),
-         assigneeId: value ? value.id : 0,
-      }));
-   };
+   const validate = useCallback(() => {
+      const errs: Partial<Record<keyof Task, string>> = {};
+      if (!task.title?.trim()) errs.title = 'Заголовок обязателен';
+      if (!task.description?.trim()) errs.description = 'Описание обязательно';
+      if (!task.assigneeId) errs.assigneeId = 'Выберите исполнителя';
+      if (mode === 'create' && !task.boardId) errs.boardName = 'Выберите проект';
+      if (!task.priority) errs.priority = 'Выберите приоритет';
+      if (mode === 'edit' && !task.status) errs.status = 'Выберите статус';
+      return errs;
+   }, [task, mode]);
 
-   const handleBoardChange = (_: any, value: Board | null) => {
-      if (mode === 'create') {
-         setTask(prev => ({
-            ...prev,
-            boardName: value ? value.name : '',
-            boardId: value ? value.id : 0,
-         }));
-      }
-   };
-
-   const handlePriorityChange = (
-      e: React.ChangeEvent<{ value: unknown }>,
-   ) => {
-      setTask(prev => ({ ...prev, priority: e.target.value as string }));
-   };
-
-   const handleStatusChange = (
-      e: React.ChangeEvent<{ value: unknown }>,
-   ) => {
-      setTask(prev => ({ ...prev, status: e.target.value as string }));
-   };
-
-   const validate = (): typeof errors => {
-      const newErrors: typeof errors = {};
-      if (!task.title?.trim()) newErrors.title = 'Заголовок обязателен';
-      if (!task.description?.trim()) newErrors.description = 'Описание обязательно';
-      if (!task.assigneeId) newErrors.assigneeId = 'Выберите исполнителя';
-      if (mode === 'create' && !task.boardId) newErrors.boardName = 'Выберите проект';
-      if (!task.priority) newErrors.priority = 'Выберите приоритет';
-      if (mode === 'edit' && !task.status) newErrors.status = 'Выберите статус';
-      return newErrors;
-   };
-
-
-   const handleCancel = () => {
-      onClose();
-   };
-
-   const handleSubmit = async () => {
-      const newErrors = validate();
-      if (Object.keys(newErrors).length) {
-         setErrors(newErrors);
+   const submit = useCallback(async () => {
+      const errs = validate();
+      if (Object.keys(errs).length) {
+         setErrors(errs);
          return;
       }
 
       const boardName = boards.find(b => b.id === task.boardId)?.name || '';
-
-      const serverPriority = priorityRuToServer[task.priority!] as string;
+      const priority = toServer.priority[task.priority!]!;
       if (mode === 'create') {
          const action = await dispatch(
             createTaskThunk({
                title: task.title!,
                description: task.description!,
-               priority: serverPriority,
+               priority,
                assigneeId: task.assigneeId!,
                boardId: task.boardId!,
                boardName,
-            }),
+            })
          );
          if (createTaskThunk.fulfilled.match(action)) {
             onSubmit({ ...action.payload, assignee: task.assignee!, boardName });
             onClose();
          }
       } else {
-         const serverStatus = statusRuToServer[task.status!] as string;
+         const status = toServer.status[task.status!]!;
          const action = await dispatch(
             updateTaskThunk({
                id: task.id!,
                title: task.title!,
                description: task.description!,
-               priority: serverPriority,
-               status: serverStatus,
+               priority,
+               status,
                assigneeId: task.assigneeId!,
                boardId: task.boardId!,
                boardName,
-            }),
+            })
          );
          if (updateTaskThunk.fulfilled.match(action)) {
             onSubmit({ ...action.payload, assignee: task.assignee!, boardName });
             onClose();
          }
       }
-   };
+   }, [dispatch, task, boards, mode, onSubmit, onClose, validate]);
 
    return (
-      <Dialog open={open} onClose={handleCancel} maxWidth="sm" fullWidth>
-         <DialogTitle sx={{ fontWeight: 'bold', fontSize: '25px' }}>
+      <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+         <DialogTitle sx={{ fontWeight: 'bold', fontSize: 25 }}>
             {mode === 'create' ? 'Создать задачу' : 'Редактировать задачу'}
          </DialogTitle>
          <DialogContent>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+            <Box display="flex" flexDirection="column" gap={2} mt={1}>
                <TextField
                   label="Заголовок"
-                  value={task.title ?? ''}
-                  onChange={handleChange('title')}
+                  value={task.title || ''}
+                  onChange={e => handleField('title', e.target.value)}
                   error={!!errors.title}
                   helperText={errors.title}
                   fullWidth
                />
                <TextField
                   label="Описание"
-                  value={task.description ?? ''}
-                  onChange={handleChange('description')}
+                  value={task.description || ''}
+                  onChange={e => handleField('description', e.target.value)}
                   error={!!errors.description}
                   helperText={errors.description}
                   fullWidth
                   multiline
                />
                <Autocomplete
-                  options={assignees}
-                  getOptionLabel={o => o.fullName}
-                  value={assignees.find(a => a.id === task.assigneeId) || null}
-                  onChange={handleAssigneeChange}
-
-                  ListboxProps={{
-                     style: {
-                        maxHeight: 240,
-                        overflowY: 'auto',
-                     }
+                  options={users}
+                  getOptionLabel={u => u.fullName}
+                  value={users.find(u => u.id === task.assigneeId) || null}
+                  onChange={(_, v) => {
+                     handleField('assignee', v || undefined);
+                     handleField('assigneeId', v?.id || 0);
                   }}
-                  renderOption={(props, option) => (
-                     <Box
-                        component="li"
-                        {...props}
-                        key={option.id}
-                        sx={{
-                           display: 'flex',
-                           alignItems: 'flex-start',
-                           pl: 1,
-                           pr: 1,
-                           width: '100%',
-                        }}
-                     >
-                        <span>{option.fullName}</span>
-                        {option.avatarUrl && (
-                           <Avatar
-                              src={option.avatarUrl}
-                              alt={option.fullName}
-                              sx={{ width: 24, height: 24, ml: 'auto'}}
-                           />
-                        )}
+                  renderOption={(props, opt) => (
+                     <Box component="li" {...props} key={opt.id} display="flex" alignItems="center">
+                        {opt.fullName}
+                        {opt.avatarUrl && <Avatar src={opt.avatarUrl} sx={{ width: 24, height: 24, ml: 'auto' }} />}
                      </Box>
                   )}
-
                   renderInput={params => (
                      <TextField
                         {...params}
@@ -277,44 +217,42 @@ export default function TaskDialog({
                         fullWidth
                      />
                   )}
+                  ListboxProps={{ sx: { maxHeight: 240, overflowY: 'auto' } }}
                />
                <FormControl fullWidth error={!!errors.priority}>
                   <InputLabel>Приоритет</InputLabel>
                   <Select
-                     value={task.priority ?? ''}
-                     onChange={handlePriorityChange}
+                     value={task.priority || ''}
+                     onChange={e => handleField('priority', e.target.value)}
                      label="Приоритет"
                   >
-                     <MenuItem value="Небольшое">Небольшое</MenuItem>
-                     <MenuItem value="Среднее">Среднее</MenuItem>
-                     <MenuItem value="Высокое">Высокое</MenuItem>
+                     {PRIORITY_LABELS.map(label => (
+                        <MenuItem key={label} value={label}>{label}</MenuItem>
+                     ))}
                   </Select>
                </FormControl>
                {mode === 'edit' && (
                   <FormControl fullWidth error={!!errors.status}>
                      <InputLabel>Статус</InputLabel>
                      <Select
-                        value={task.status ?? ''}
-                        onChange={handleStatusChange}
+                        value={task.status || ''}
+                        onChange={e => handleField('status', e.target.value)}
                         label="Статус"
                      >
-                        <MenuItem value="Не начато">Не начато</MenuItem>
-                        <MenuItem value="В процессе">В процессе</MenuItem>
-                        <MenuItem value="Выполнено">Выполнено</MenuItem>
+                        {STATUS_LABELS.map(label => (
+                           <MenuItem key={label} value={label}>{label}</MenuItem>
+                        ))}
                      </Select>
                   </FormControl>
                )}
                {mode === 'create' ? (
                   <Autocomplete
                      options={boards}
-                     getOptionLabel={o => o.name}
+                     getOptionLabel={b => b.name}
                      value={boards.find(b => b.id === task.boardId) || null}
-                     onChange={handleBoardChange}
-                     ListboxProps={{
-                        style: {
-                           maxHeight: 240,
-                           overflowY: 'auto',
-                        }
+                     onChange={(_, v) => {
+                        handleField('boardName', v?.name || '');
+                        handleField('boardId', v?.id || 0);
                      }}
                      renderInput={params => (
                         <TextField
@@ -322,37 +260,28 @@ export default function TaskDialog({
                            label="Проект"
                            error={!!errors.boardName}
                            helperText={errors.boardName}
+                           fullWidth
                         />
                      )}
+                     ListboxProps={{ sx: { maxHeight: 240, overflowY: 'auto' } }}
                   />
                ) : (
-                  task.boardName &&
-                  <TextField
-                     label="Проект"
-                     value={task.boardName}
-                     disabled
-                     fullWidth
-                     error={!!errors.boardName}
-                     helperText={errors.boardName}
-                  />
+                  task.boardName && (
+                     <TextField
+                        label="Проект"
+                        value={task.boardName}
+                        disabled
+                        fullWidth
+                        error={!!errors.boardName}
+                        helperText={errors.boardName}
+                     />
+                  )
                )}
             </Box>
          </DialogContent>
          <DialogActions>
-            <Button
-               onClick={handleCancel}
-               disabled={loading}
-               className="simple-button"
-               variant="contained"
-            >
-               Отменить
-            </Button>
-            <Button
-               onClick={handleSubmit}
-               disabled={loading}
-               className="simple-button"
-               variant="contained"
-            >
+            <Button onClick={onClose} disabled={loading} variant="contained">Отменить</Button>
+            <Button onClick={submit} disabled={loading} variant="contained">
                {mode === 'create' ? 'Создать' : 'Сохранить'}
             </Button>
          </DialogActions>

@@ -8,26 +8,24 @@ import { ThemeProvider, CssBaseline, useMediaQuery } from '@mui/material';
 import RouteControl from './Components/Routes/RoutesControl';
 import { store } from './Components/ReduxStore/store';
 import { Provider } from 'react-redux';
-
-export type ThemeMode = 'system' | 'light' | 'dark';
+import { APP_THEME_KEY, ThemeModes, ThemeMode } from './Components/Constants/storageKeys.ts';
 
 function App() {
-
    const [mode, setMode] = useState<ThemeMode>(() => {
-      return (localStorage.getItem('appTheme') as ThemeMode) || 'system';
+      return (localStorage.getItem(APP_THEME_KEY) as ThemeMode) || ThemeModes.System;
    });
 
    useEffect(() => {
-      localStorage.setItem('appTheme', mode);
+      localStorage.setItem(APP_THEME_KEY, mode);
    }, [mode]);
 
    const prefersDark = useMediaQuery('(prefers-color-scheme: dark)');
    const appliedTheme =
-      mode === 'system'
+      mode === ThemeModes.System
          ? prefersDark
             ? darkTheme
             : lightTheme
-         : mode === 'dark'
+         : mode === ThemeModes.Dark
             ? darkTheme
             : lightTheme;
 

@@ -1,16 +1,15 @@
 // src/Pages/AllBoards.tsx
 
-import React, { useEffect, useState } from 'react';
-import { Box, Button, Typography, Paper, CircularProgress } from '@mui/material';
+import React from 'react';
+import { Box, Button, Typography, Paper } from '@mui/material';
 import { NavLink } from 'react-router-dom';
 import '../../Styles/ButtonStyles.css';
-import { useDispatch, useSelector } from 'react-redux';
-import { fetchBoards, selectBoards, selectLoading, selectError } from '../ReduxSlices/dataSlice';
-import type { AppDispatch, RootState } from '../ReduxStore/store';
+import {useSelector } from 'react-redux';
+import {selectBoards } from '../ReduxSlices/dataSlice';
+import type { RootState } from '../ReduxStore/store';
 
 export default function AllBoards() {
    const boards    = useSelector((state: RootState) => selectBoards(state));
-   const error     = useSelector((state: RootState) => selectError(state));
 
 
    return (

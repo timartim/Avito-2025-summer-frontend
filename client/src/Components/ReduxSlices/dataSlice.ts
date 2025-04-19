@@ -17,6 +17,7 @@ export const fetchBoards = createAsyncThunk<Board[], void, { rejectValue: string
       try {
          return await getBoards();
       } catch (err: any) {
+
          return rejectWithValue('Не удалось загрузить доски');
       }
    },
@@ -49,7 +50,6 @@ export const createTask = createAsyncThunk<Task, Task, { rejectValue: string }>(
    async (input, { rejectWithValue }) => {
       try {
          const result = await apiCreateTask(input);
-         console.log(result);
          return {
             id: result.id,
             title: input.title,
@@ -79,6 +79,7 @@ export const updateTask = createAsyncThunk<Task, Task, { rejectValue: string }>(
       }
    },
 );
+
 export const updateTaskStatus = createAsyncThunk<
    { id: number; status: Status },
    { id: number; status: Status },
@@ -202,8 +203,6 @@ const dataSlice = createSlice({
          state.error = null;
       });
       builder.addCase(createTask.fulfilled, (state: RootState, { payload }) => {
-         console.log('PAYLOAD');
-         console.log(payload);
          state.tasks.push(payload);
          if (payload.boardId === state.currentBoardId) {
             // добавляем в нужную группу
@@ -233,7 +232,6 @@ const dataSlice = createSlice({
          state.error = null;
       });
       builder.addCase(updateTask.fulfilled, (state: RootState, { payload }) => {
-         console.log(payload);
          const idx = state.tasks.findIndex(t => t.id === payload.id);
          if (idx !== -1) state.tasks[idx] = payload;
          const oldStatus = state.boardTasks.Backlog.some(t => t.id === payload.id) ? 'Backlog'
