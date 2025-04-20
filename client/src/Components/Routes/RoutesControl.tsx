@@ -1,5 +1,21 @@
 // src/Components/Routes/RoutesControl.tsx
 
+/**
+ * Компонент верхнего уровня, отвечающий за маршрутизацию
+ * и глобальные элементы интерфейса (AppBar, диалоги, загрузка, уведомления).
+ *
+ * Задачи:
+ * - Шапка приложения (AppBar) с навигацией между списком задач и досок.
+ * - Кнопки для добавления задачи, восстановления черновиков и открытия настроек.
+ * - Динамическое измерение высоты AppBar для корректного отступа содержимого.
+ * - Загрузка данных при старте (доски, пользователи, задачи).
+ * - Глобальные индикатор загрузки и Snackbar для уведомлений.
+ * - Рендеринг маршрутов в основной области (через RoutesConfig).
+ * - Диалог создания/редактирования задачи (TaskDialog).
+ * - Диалог работы с черновиками (DraftsDialog).
+ * - Диалог настроек темы приложения (SettingsDialog).
+ */
+
 import React, { useState, useEffect, useRef } from 'react';
 import {
    AppBar,
@@ -13,15 +29,16 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import RoutesConfig from './RoutesConfig';
 import TaskDialog from '../Dialogs/TaskDialog';
-import GlobalLoading from '../Beauty/GlobalLoading';
-import GlobalSnackbar from '../Beauty/GlobalSnackbar';
+import GlobalLoading from '../Beauty/Global/GlobalLoading';
+import GlobalSnackbar from '../Beauty/Global/GlobalSnackbar';
 import SettingsDialog from '../Dialogs/SettingsDialog';
 import SettingsIcon from '@mui/icons-material/Settings';
 import RestoreIcon from '@mui/icons-material/Restore';
-import { fetchBoards, fetchTasks, fetchUsers } from '../ReduxSlices/dataSlice';
-import { RootState } from '../ReduxStore/store';
+import { fetchBoards, fetchTasks, fetchUsers } from '../../ReduxSlices/dataSlice';
+import { RootState } from '../../ReduxStore/store';
 import '../../Styles/ButtonStyles.css';
 import DraftsDialog from '../Dialogs/DraftDialog';
+import { Task } from '../../Interfaces/appInterfaces.ts';
 
 export type ThemeMode = 'system' | 'light' | 'dark';
 
@@ -33,9 +50,11 @@ interface RoutesControlProps {
 export default function RoutesControl({ mode, onModeChange }: RoutesControlProps) {
    const dispatch = useDispatch();
 
+   // Ref для измерения высоты AppBar
    const appBarRef = useRef<HTMLDivElement>(null);
    const [appBarHeight, setAppBarHeight] = useState(0);
 
+   // Состояние диалогов и черновиков
    const [openTaskDialog, setOpenTaskDialog] = useState(false);
    const [openSettings, setOpenSettings] = useState(false);
    const [openDrafts, setOpenDrafts] = useState(false);
@@ -51,12 +70,14 @@ export default function RoutesControl({ mode, onModeChange }: RoutesControlProps
    const isLoading = useSelector((state: RootState) => state.data.isLoading);
    const location = useLocation();
 
+   // При монтировании загружаем справочные данные
    useEffect(() => {
       dispatch(fetchBoards());
       dispatch(fetchUsers());
       dispatch(fetchTasks());
    }, [dispatch]);
 
+   // Измерение и обновление высоты AppBar при изменении размера окна
    useEffect(() => {
       const measure = () => {
          if (appBarRef.current) {
@@ -68,19 +89,23 @@ export default function RoutesControl({ mode, onModeChange }: RoutesControlProps
       return () => window.removeEventListener('resize', measure);
    }, []);
 
-   const handleTaskSubmit = (task: Task) => {
+   // После отправки формы задачи закрываем диалог и сбрасываем черновик
+   const handleTaskSubmit = () => {
       setOpenTaskDialog(false);
       setRestoredDraft({});
    };
 
+   // Активная подсветка кнопки "Проекты" для соответствующих путей
    const isBoardsButtonActive =
       location.pathname === '/boards' || location.pathname.startsWith('/board/');
 
+   // Восстановление выбранного черновика
    const handleRestoreDraft = (draft: Partial<Task>) => {
       setOpenDrafts(false);
       setRestoredDraft(draft);
    };
 
+   // Удаление черновика из localStorage и состояния
    const handleDeleteDraft = (index: number) => {
       const updated = drafts.filter((_, i) => i !== index);
       setDrafts(updated);
@@ -93,7 +118,7 @@ export default function RoutesControl({ mode, onModeChange }: RoutesControlProps
          <GlobalLoading />
          <GlobalSnackbar />
 
-         {/* Привязываем ref, чтобы мерить высоту */}
+         {/* AppBar с меню навигации и кнопками */}
          <AppBar ref={appBarRef} elevation={1} color="default">
             <Toolbar sx={{ justifyContent: 'space-between' }}>
                <Box>
@@ -120,6 +145,7 @@ export default function RoutesControl({ mode, onModeChange }: RoutesControlProps
                </Box>
 
                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  {/* Открыть диалог создания задачи */}
                   <Button
                      variant="contained"
                      color="primary"
@@ -132,16 +158,20 @@ export default function RoutesControl({ mode, onModeChange }: RoutesControlProps
                      Добавить задачу
                   </Button>
 
+                  {/* Открыть диалог черновиков */}
                   <IconButton
                      color="primary"
+                     className="simple-button"
                      onClick={() => setOpenDrafts(true)}
                      sx={{ ml: 1 }}
                   >
                      <RestoreIcon />
                   </IconButton>
 
+                  {/* Открыть диалог настроек */}
                   <IconButton
                      color="primary"
+                     className="simple-button"
                      onClick={() => setOpenSettings(true)}
                      sx={{ ml: 1 }}
                   >
@@ -151,6 +181,7 @@ export default function RoutesControl({ mode, onModeChange }: RoutesControlProps
             </Toolbar>
          </AppBar>
 
+         {/* Основной контент: маршруты отображаются после окончания глобальной загрузки */}
          <Box
             sx={{
                width: '100vw',
@@ -162,6 +193,7 @@ export default function RoutesControl({ mode, onModeChange }: RoutesControlProps
             {!isLoading && <RoutesConfig />}
          </Box>
 
+         {/* Диалог создания/редактирования задачи */}
          <TaskDialog
             open={openTaskDialog}
             onClose={() => {
@@ -174,6 +206,7 @@ export default function RoutesControl({ mode, onModeChange }: RoutesControlProps
             onSubmit={handleTaskSubmit}
          />
 
+         {/* Диалог черновиков */}
          <DraftsDialog
             open={openDrafts}
             drafts={drafts}
@@ -182,6 +215,7 @@ export default function RoutesControl({ mode, onModeChange }: RoutesControlProps
             onDelete={handleDeleteDraft}
          />
 
+         {/* Диалог настроек темы */}
          <SettingsDialog
             open={openSettings}
             mode={mode}

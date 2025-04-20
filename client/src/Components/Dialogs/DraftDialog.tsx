@@ -1,4 +1,5 @@
 // src/Components/Dialogs/DraftsDialog.tsx
+
 import React, { useState, useEffect, useCallback } from 'react';
 import {
    Dialog,
@@ -10,9 +11,9 @@ import {
    List,
 } from '@mui/material';
 import TaskDialog from '../Dialogs/TaskDialog';
-import { useTaskDrafts } from '../Hooks/useTaskDrafts';
-import { DraftItem } from '../Beauty/DraftItem.tsx';
-import { Task } from '../Interfaces/appInterfaces';
+import { useTaskDrafts } from '../../Hooks/useTaskDrafts';
+import { DraftItem } from '../Beauty/Draft/DraftItem';
+import { Task } from '../../Interfaces/appInterfaces';
 
 interface DraftsDialogProps {
    open: boolean;
@@ -20,6 +21,12 @@ interface DraftsDialogProps {
    onRestore: (task: Task) => void;
 }
 
+/**
+ * Диалоговое окно для работы с черновиками задач.
+ * - Загружает список черновиков через хук useTaskDrafts.
+ * - Позволяет удалять и восстанавливать отдельные черновики.
+ * - При восстановлении открывает TaskDialog для доработки и создания новой задачи.
+ */
 export default function DraftsDialog({
                                         open,
                                         onClose,
@@ -32,14 +39,17 @@ export default function DraftsDialog({
       index: number;
    } | null>(null);
 
+   // При открытии диалога загружаем черновики
    useEffect(() => {
       if (open) load();
    }, [open, load]);
 
+   // Удаление черновика по индексу
    const handleDelete = useCallback((idx: number) => {
       remove(idx);
    }, [remove]);
 
+   // Восстановление черновика: закрываем список, открываем TaskDialog
    const handleRestore = useCallback(
       (draft: Partial<Task>, idx: number) => {
          onClose();
@@ -49,12 +59,14 @@ export default function DraftsDialog({
       [onClose]
    );
 
+   // Закрытие TaskDialog без сохранения
    const handleTaskClose = useCallback(() => {
       setOpenTask(false);
       setSelected(null);
-      load();
+      load(); // обновляем список после закрытия
    }, [load]);
 
+   // Обработка создания задачи: вызываем onRestore, удаляем черновик
    const handleTaskSubmit = useCallback(
       (created: Task) => {
          onRestore(created);
@@ -95,7 +107,7 @@ export default function DraftsDialog({
                )}
             </DialogContent>
             <DialogActions>
-               <Button onClick={onClose} variant="contained">
+               <Button onClick={onClose} variant="contained" className='simple-button'>
                   Закрыть
                </Button>
             </DialogActions>

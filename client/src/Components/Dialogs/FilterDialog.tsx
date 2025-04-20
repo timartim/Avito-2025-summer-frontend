@@ -1,4 +1,5 @@
 // src/Pages/FilterDialog.tsx
+
 import React from 'react';
 import {
    Dialog,
@@ -7,10 +8,10 @@ import {
    Button,
    Box,
 } from '@mui/material';
-import { useFilterDialog } from '../Hooks/useFilterDialog';
-import { FilterGroup } from '../Beauty/FilterGroup';
-import { BoardFilter } from '../Beauty/BoardFilter';
-import { Filter } from '../Interfaces/serviceInterfaces';
+import { useFilterDialog } from '../../Hooks/useFilterDialog';
+import { FilterGroup } from '../Beauty/Filter/FilterGroup';
+import { BoardFilter } from '../Beauty/Filter/BoardFilter';
+import { Filter } from '../../Interfaces/serviceInterfaces';
 
 interface FilterDialogProps {
    open: boolean;
@@ -19,6 +20,15 @@ interface FilterDialogProps {
    onApplyFilter: (f: Filter) => void;
 }
 
+/**
+ * Окно фильтрации задач по приоритетам, статусам и доскам.
+ *
+ * Props:
+ *  - open: показывает или скрывает диалог.
+ *  - onClose: вызывается при закрытии окна.
+ *  - initialValues: начальные значения фильтра.
+ *  - onApplyFilter: колбэк для применения выбранных фильтров.
+ */
 export default function FilterDialog({
                                         open,
                                         onClose,
@@ -47,20 +57,22 @@ export default function FilterDialog({
             Фильтры
          </DialogTitle>
          <DialogContent>
+            {/* Группа фильтров по приоритетам */}
             <FilterGroup
                legend="Приоритет"
                options={priorityOptions}
                selected={selectedPriorities}
                onToggle={togglePriority}
             />
+            {/* Группа фильтров по статусам */}
             <FilterGroup
                legend="Статус"
                options={statusOptions}
                selected={selectedStatuses}
                onToggle={toggleStatus}
             />
+            {/* Фильтр по доскам с поиском */}
             <BoardFilter
-               boards={filteredBoards}
                filteredBoards={filteredBoards}
                search={searchBoard}
                onSearch={setSearchBoard}
@@ -69,9 +81,22 @@ export default function FilterDialog({
             />
          </DialogContent>
          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, p: 2 }}>
-            <Button variant='contained' color='secondary' className={'simple-button'} onClick={reset}>Сбросить</Button>
-            <Button variant='contained' onClick={onClose} className={'simple-button'}>Отменить</Button>
-            <Button variant='contained' onClick={() => apply(onApplyFilter, onClose)} className={'simple-button'}>Найти</Button>
+            {/* Сброс всех фильтров */}
+            <Button variant="contained" color="secondary" className="simple-button" onClick={reset}>
+               Сбросить
+            </Button>
+            {/* Закрыть без применения */}
+            <Button variant="contained" onClick={onClose} className="simple-button">
+               Отменить
+            </Button>
+            {/* Применить выбранные фильтры */}
+            <Button
+               variant="contained"
+               onClick={() => apply(onApplyFilter, onClose)}
+               className="simple-button"
+            >
+               Найти
+            </Button>
          </Box>
       </Dialog>
    );

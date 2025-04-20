@@ -1,4 +1,5 @@
-// Components/Beauty/SettingsDialog.tsx
+// src/Components/Beauty/SettingsDialog.tsx
+
 import React from 'react';
 import {
    Dialog,
@@ -20,11 +21,23 @@ interface Props {
    onChange: (mode: ThemeMode) => void;
 }
 
+/**
+ * Диалог настроек приложения.
+ *
+ * Позволяет выбрать тему оформления: системная, светлая или тёмная.
+ *
+ * Props:
+ *  - open: открывается ли диалог.
+ *  - mode: текущий режим темы.
+ *  - onClose: вызывается при закрытии диалога.
+ *  - onChange: вызывается при изменении темы, передаёт новое значение ThemeMode.
+ */
 const SettingsDialog: React.FC<Props> = ({ open, mode, onClose, onChange }) => {
    return (
       <Dialog open={open} onClose={onClose}>
          <DialogTitle>Настройки</DialogTitle>
          <DialogContent>
+            {/* Выбор темы */}
             <FormControl fullWidth sx={{ mt: 1, minWidth: 200 }}>
                <InputLabel id="theme-select-label">Тема</InputLabel>
                <Select
@@ -40,8 +53,13 @@ const SettingsDialog: React.FC<Props> = ({ open, mode, onClose, onChange }) => {
             </FormControl>
          </DialogContent>
          <DialogActions>
-            <Button onClick={onClose} color="primary">Отменить</Button>
-            <Button onClick={onClose} variant="contained" color="primary">OK</Button>
+            {/* Кнопки управления диалогом */}
+            <Button onClick={onClose} color="primary" className="simple-button">
+               Отменить
+            </Button>
+            <Button onClick={onClose} variant="contained" color="primary" className="simple-button">
+               OK
+            </Button>
          </DialogActions>
       </Dialog>
    );
