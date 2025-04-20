@@ -20,17 +20,7 @@ export default function LoadingIndicator() {
    return (
       <>
          {isLoading && (
-            // Затемнённый фон, блокирующий взаимодействие
-            <Backdrop
-               open={isLoading}
-               sx={{
-                  color: '#fff',
-                  zIndex: (theme) => theme.zIndex.drawer + 1,
-               }}
-            >
-               {/* Круговой индикатор выполнения */}
-               <CircularProgress color="inherit" />
-            </Backdrop>
+               <CircularProgress color="inherit" sx={{mr: 2}} />
          )}
       </>
    );

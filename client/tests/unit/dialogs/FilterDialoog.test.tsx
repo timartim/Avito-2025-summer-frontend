@@ -51,9 +51,9 @@ describe('FilterDialog', () => {
       renderFilterDialog({ priorities: ['High'], statuses: ['Backlog'], boards: ['Beta'] });
 
       // приоритеты
-      expect(screen.getByLabelText('Высокое')).toBeInTheDocument();
-      expect(screen.getByLabelText('Среднее')).toBeInTheDocument();
-      expect(screen.getByLabelText('Небольшое')).toBeInTheDocument();
+      expect(screen.getByLabelText('Высокий')).toBeInTheDocument();
+      expect(screen.getByLabelText('Средний')).toBeInTheDocument();
+      expect(screen.getByLabelText('Низкий')).toBeInTheDocument();
 
       // статусы
       expect(screen.getByLabelText('Не начато')).toBeInTheDocument();
@@ -67,7 +67,7 @@ describe('FilterDialog', () => {
 
       // сброс
       fireEvent.click(screen.getByRole('button', { name: /Сбросить/i }));
-      expect((screen.getByLabelText('Высокое') as HTMLInputElement).checked).toBe(false);
+      expect((screen.getByLabelText('Высокий') as HTMLInputElement).checked).toBe(false);
       expect((screen.getByLabelText('Не начато') as HTMLInputElement).checked).toBe(false);
       expect((screen.getByLabelText('Beta') as HTMLInputElement).checked).toBe(false);
    });
@@ -90,7 +90,7 @@ describe('FilterDialog', () => {
       const { onApplyFilter } = renderFilterDialog(initial);
 
       // выбираем приоритет "Высокое"
-      fireEvent.click(screen.getByLabelText('Высокое'));
+      fireEvent.click(screen.getByLabelText('Высокий'));
       // выбираем статус "В процессе"
       fireEvent.click(screen.getByLabelText('В процессе'));
       // выбираем доску "Gamma"

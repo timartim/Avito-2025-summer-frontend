@@ -5,6 +5,11 @@ FROM node:20-alpine AS build
 
 WORKDIR /app
 
+# ❶ Получаем аргумент (если не придёт – берём дефолт)
+ARG VITE_API_BASE_URL=http://localhost:8081/api/v1
+# ❷ Делаем его переменной окружения, чтобы Vite «увидел»
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+
 # копируем package.json и lock-файл для npm
 COPY package.json package-lock.json ./
 

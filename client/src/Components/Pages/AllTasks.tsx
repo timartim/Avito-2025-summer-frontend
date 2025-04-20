@@ -5,7 +5,7 @@ import { Box, Paper } from '@mui/material';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { RootState } from '../../ReduxStore/store';
-import { selectTasks } from '../../ReduxSlices/dataSlice';
+import { selectTasks, selectUsers } from '../../ReduxSlices/dataSlice';
 import { Task } from '../../Interfaces/appInterfaces';
 import { Filter } from '../../Interfaces/serviceInterfaces';
 import TaskDialog from '../Dialogs/TaskDialog';
@@ -47,14 +47,21 @@ export default function AllTasks() {
    const [openFilter, setOpenFilter] = useState(false);
    const [openTask, setOpenTask] = useState(false);
    const [selectedTask, setSelectedTask] = useState<Partial<Task>>({});
+   const users = useSelector((s: RootState) => selectUsers(s));
 
+   const userNameById = useMemo(() => {
+      const map = new Map<number, string>();
+      users.forEach(u => map.set(u.id, u.fullName));
+      return map;
+   }, [users]);
    /**
     * Вычисляем отображаемый список задач с учётом поиска и фильтров.
     */
    const displayed = useMemo(() => {
       return allTasks
          .filter(t =>
-            t.title.toLowerCase().includes(searchText.toLowerCase())
+            t.title.toLowerCase().includes(searchText.toLowerCase()) ||
+            t.assignee?.fullName.toLowerCase().includes(searchText.toLowerCase())
          )
          .filter(t =>
             filters.priorities.length

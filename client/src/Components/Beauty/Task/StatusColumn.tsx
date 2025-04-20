@@ -49,7 +49,7 @@ export function StatusColumn({ statusKey, statusLabel, tasks, onClick }: Props) 
             {statusLabel}
          </Typography>
 
-         {/* Список задач – droppable‑контейнер */}
+         {/* Список задач – droppable‑контейнер */}
          <Droppable droppableId={statusKey}>
             {(provided) => (
                <Box

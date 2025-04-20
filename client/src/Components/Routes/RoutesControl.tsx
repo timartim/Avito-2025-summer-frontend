@@ -115,7 +115,6 @@ export default function RoutesControl({ mode, onModeChange }: RoutesControlProps
    return (
       <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
          <CssBaseline />
-         <GlobalLoading />
          <GlobalSnackbar />
 
          {/* AppBar с меню навигации и кнопками */}
@@ -145,6 +144,7 @@ export default function RoutesControl({ mode, onModeChange }: RoutesControlProps
                </Box>
 
                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <GlobalLoading />
                   {/* Открыть диалог создания задачи */}
                   <Button
                      variant="contained"
