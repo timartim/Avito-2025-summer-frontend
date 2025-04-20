@@ -5,6 +5,12 @@
 ### 1.1 Docker (рекомендуется)
 **Требования:** установлен Docker + Docker Compose
 
+1. Сначала нужно установить зависимости
+```bash
+cd cliet
+npm install 
+```
+Теперь соберем наше приложение в докере
 ```bash
 docker‑compose up --build
 ```
